@@ -1,0 +1,62 @@
+{
+	tools<mac>: 
+	{
+		premake: "../bin/premake5"
+		texturec: "../bin/texturec"
+	}
+	
+	extensions:
+	{
+		ext_test:
+		{
+			module: "ext",
+			function: "ext_test_function"
+		}
+	}
+	
+	build-order:[
+		"texturec",
+		"premake"
+	]
+	
+	build-mac:
+	{
+		server:
+		{
+			type: connect_to_server,
+			address: 192.168.0.1
+		}
+		
+		ext_test:
+		{
+			some_data: "boo"
+		}
+		
+		premake:
+		{
+			args: [
+				"--help"
+			]
+		}
+		
+		premake-2:
+		{
+			type: premake
+			
+			args: [
+				"--version"
+			]
+		}
+		
+		texturec:
+		{
+			args: [
+				"--help"
+			]
+			
+			files: [
+				"", ""
+			]
+		}
+	}
+}
