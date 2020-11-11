@@ -1,0 +1,6 @@
+[submodule "scripts/jsn"]
+	path = scripts/jsn
+	url = https://github.com/polymonster/jsn.git
+[submodule "scripts/cgu"]
+	path = scripts/cgu
+	url = https://github.com/polymonster/cgu.git

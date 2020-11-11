@@ -59,6 +59,14 @@
 					]
 				}
 			] 
+		},
+		
+		clean:
+		{
+			directories: [
+				"build",
+				"bin"
+			]
 		}
 	}
 	

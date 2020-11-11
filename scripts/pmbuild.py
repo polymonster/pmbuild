@@ -11,6 +11,7 @@ import cryptography
 import importlib
 import glob
 import re
+import shutil
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -123,8 +124,13 @@ def copy(config, task_name, files):
 
 
 # deletes files and directories specified in files
-def clean(config, task_name, files):
-    pass
+def clean(config, task_name):
+    clean_task = config[task_name]
+    if "files" in clean_task:
+        files = get_task_files(config, task_name)
+    if "directories" in clean_task:
+        for dir in clean_task["directories"]:
+            shutil.rmtree(dir, ignore_errors=True)
 
 
 # takes a taks files objects and extracts a file list from directory, single files, glob or regex
@@ -255,7 +261,6 @@ def main():
     scripts = {
         "copy": copy,
         "connect_to_server": connect_to_server,
-
     }
 
     # add extensions
@@ -264,10 +269,20 @@ def main():
         ext_module = importlib.import_module(ext["module"])
         scripts[ext_name] = getattr(ext_module, ext["function"])
 
+    # clean is a special operation which runs first
+    if "-clean" in sys.argv:
+        for task_name in config.keys():
+            task = config[task_name]
+            if "type" not in task:
+                continue
+            if task["type"] == "clean":
+                util.print_header(task_name)
+                clean(config, task_name)
+    return
+
     # run tasks
     for task_name in config.keys():
         task = config[task_name]
-        print(task)
         if "type" not in task:
             continue
         util.print_header(task_name)
