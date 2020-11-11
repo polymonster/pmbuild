@@ -269,7 +269,7 @@ def main():
         ext_module = importlib.import_module(ext["module"])
         scripts[ext_name] = getattr(ext_module, ext["function"])
 
-    # clean is a special operation which runs first
+    # cleans are special operations which runs first
     if "-clean" in sys.argv:
         for task_name in config.keys():
             task = config[task_name]
@@ -278,7 +278,6 @@ def main():
             if task["type"] == "clean":
                 util.print_header(task_name)
                 clean(config, task_name)
-    return
 
     # run tasks
     for task_name in config.keys():

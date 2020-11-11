@@ -2,7 +2,6 @@ import platform
 import os
 import shutil
 import time
-import cgu
 
 
 # get platform name, allowing user override from the commandline
