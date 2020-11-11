@@ -1,10 +1,21 @@
 {
+	// relative paths to tool locations, you can add more binaries in here
 	tools<mac>: 
 	{
 		premake: "../bin/premake5"
 		texturec: "../bin/texturec"
+		pmfx: "python3 "
 	}
 	
+	// use <mac> <windows> or <linux> to specify objects for the specific platform
+	tools<windows>: 
+	{
+		premake: "../bin/premake5.exe"
+		texturec: "../bin/texturec.exe"
+		pmfx: "py -3 "
+	}
+	
+	// register extension python modules
 	extensions:
 	{
 		ext_test:
@@ -14,12 +25,45 @@
 		}
 	}
 	
-	build-order:[
-		"texturec",
-		"premake"
-	]
+	// base is common for all platforms
+	base:
+	{
+		copy-base:
+		{
+			type: copy
+			files: [
+				["assets/folder", "bin/folder"]
+			]
+		}
+		
+		copy-wildcards:
+		{
+			type: copy
+			files: [
+				["assets/random_files/*.txt", "bin/text_files"],
+				["assets/random_files/*.json", "bin/json_files"],
+				["assets/random_files/*.xml", "bin/xml_files"],
+			]
+		}
+		
+		copy-regex:
+		{
+			type: copy
+			files: [
+				{
+					match: '^.+?matchfile\\.(.*)'
+					directory: "assets"
+					sub: [
+						["assets/regex", "bin/regout"],
+						[".txt", ".newext"]
+					]
+				}
+			] 
+		}
+	}
 	
-	build-mac:
+	// mac inherits from base and then specialises
+	mac(base):
 	{
 		server:
 		{
