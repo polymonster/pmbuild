@@ -1,5 +1,4 @@
 import time
-import os
 import json
 import sys
 import subprocess
@@ -10,6 +9,8 @@ import base64
 import os
 import cryptography
 import importlib
+import glob
+import re
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -115,14 +116,65 @@ def connect_to_server(config, task_name):
     '''
 
 
-# copes files from src to destination
-def copy(config, task_name):
-    pass
+# copes files from src to destination only if newer
+def copy(config, task_name, files):
+    for file in files:
+        util.copy_file_create_dir_if_newer(file[0], file[1])
 
 
 # deletes files and directories specified in files
-def clean(config, task_name):
+def clean(config, task_name, files):
     pass
+
+
+# takes a taks files objects and extracts a file list from directory, single files, glob or regex
+def get_task_files(config, task_name):
+    outputs = []
+    files_array = config[task_name]["files"]
+    sanitized_outputs = []
+    for files_task in files_array:
+        if type(files_task) == dict:
+            print("regex!")
+            regex = re.compile(files_task["match"])
+            file_list = []
+            for root, dirs, files in os.walk(files_task["directory"]):
+                for file in files:
+                    file_list.append(util.sanitize_file_path(os.path.join(root, file)))
+            for file in file_list:
+                if re.match(regex, file):
+                    res = file
+                    for sub in files_task["sub"]:
+                        pattern = re.compile(sub[0])
+                        res = re.sub(pattern, sub[1], res)
+                    sanitized_outputs.append((file, util.sanitize_file_path(res)))
+        else:
+            if len(files_task) != 2:
+                print("ERROR: file tasks must be an array of size 2 [src, dst]")
+                exit(1)
+            inputs = glob.glob(files_task[0], recursive=True)
+            if len(inputs) > 1:
+                for src in inputs:
+                    src_glob_pos = files_task[0].find("*")
+                    src_root = util.sanitize_file_path(files_task[0][:src_glob_pos - 1])
+                    dst_root = util.sanitize_file_path(files_task[1])
+                    src = util.sanitize_file_path(src)
+                    rp = src.find(src_root) + len(src_root)
+                    dst = src[:rp].replace(src_root, dst_root) + src[rp:]
+                    outputs.append((src, dst))
+            elif len(inputs) == 1:
+                if os.path.isdir(files_task[0]):
+                    # dir
+                    for root, dirs, files in os.walk(files_task[0]):
+                        for file in files:
+                            src = util.sanitize_file_path(os.path.join(root, file))
+                            dst = src.replace(util.sanitize_file_path(files_task[0]), util.sanitize_file_path(files_task[1]))
+                            outputs.append((src, dst))
+                else:
+                    # single file
+                    outputs.append((files_task[0], files_task[1]))
+            for pair in outputs:
+                sanitized_outputs.append((util.sanitize_file_path(pair[0]), util.sanitize_file_path(pair[1])))
+    return sanitized_outputs
 
 
 # configure user settings for each platform
@@ -203,7 +255,7 @@ def main():
     scripts = {
         "copy": copy,
         "connect_to_server": connect_to_server,
-        
+
     }
 
     # add extensions
@@ -218,9 +270,9 @@ def main():
         print(task)
         if "type" not in task:
             continue
+        util.print_header(task_name)
         task_type = task["type"]
         if task_type in config["tools"].keys():
-            util.print_header(task_name)
             if "files" in task.keys():
                 print("for files job " + task_name)
                 # run(config, task_name, task_type, [""])
@@ -228,7 +280,10 @@ def main():
                 print("single run job " + task_name)
                 # run(config, task_name, task_type, [""])
         elif task_type in scripts.keys():
-            scripts.get(task_type)(config, task_name)
+            if "files" in task.keys():
+                scripts.get(task_type)(config, task_name, get_task_files(config, task_name))
+            else:
+                scripts.get(task_type)(config, task_name)
             pass
 
     util.print_duration(start_time)
