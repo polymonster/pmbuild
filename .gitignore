@@ -1,9 +1,8 @@
-# Windows
+# os junk
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
-
 *.cab
 *.msi
 *.msm
@@ -13,31 +12,24 @@ $RECYCLE.BIN/
 .DS_Store
 .AppleDouble
 .LSOverride
-
-examples/*ios_files*
-**__pycache__**
-*.pyc
-**.idea/
-tools/venv 
-
-# Thumbnails
-._*
-
-# Files that might appear in the root of a volume
 .DocumentRevisions-V100
 .fseventsd
 .Spotlight-V100
 .TemporaryItems
 .Trashes
 .VolumeIcon.icns
-
-# Directories potentially created on remote AFP share
+._*
 .AppleDB
 .AppleDesktop
 Network Trash Folder
 Temporary Items
 .apdisk
-build_config_user.json
-test_results/
-**/container.txt
+
+# python/pycharm
+**__pycache__**
+*.pyc
+**.idea/
+
+# pmbuild specific
 **.user.jsn
+bin/

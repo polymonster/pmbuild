@@ -1,0 +1,38 @@
+{
+	texturec:
+	{
+		"-t": "RGBA8"
+		"--mips": true
+		
+		rules:
+		{
+			compess:
+			{
+				files: [
+					"pbr/*.png"
+				]
+				
+				"-t": "BC3"
+			}
+			
+			normalmap:
+			{
+				files: [
+					"**/*_normal.*"
+				]
+				
+				"--normalmap": true
+			}
+			
+			no-mips:
+			{
+				files: [
+					"blend_test_bg.png",
+					"blend_test_fg.png",
+				]
+				
+				"--mips": false
+			}
+		}
+	}
+}

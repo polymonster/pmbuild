@@ -70,44 +70,28 @@
 		}
 	}
 	
-	// mac inherits from base and then specialises
+	// mac inherits from base and then specialises for this platform
 	mac(base):
-	{
-		server:
+	{		
+		shell: 
 		{
-			type: connect_to_server,
-			address: 192.168.0.1
-		}
-		
-		ext_test:
-		{
-			some_data: "boo"
-		}
-		
-		premake:
-		{
-			args: [
-				"--help"
-			]
-		}
-		
-		premake-2:
-		{
-			type: premake
-			
-			args: [
-				"--version"
+			commands: [ 
+				"echo hello_world",
+				"pwd",
+				"git status"
 			]
 		}
 		
 		texturec:
 		{
 			args: [
-				"--help"
+				"-f %{input_file}",
+				"%{export_args}",
+				"-o %{output_file}"
 			]
 			
 			files: [
-				"", ""
+				["assets/textures/**/*.*", "bin/textures"]
 			]
 		}
 	}

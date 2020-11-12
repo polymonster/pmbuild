@@ -17,6 +17,11 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 
+# stub for jobs to do nothing
+def stub(config):
+    pass
+
+
 # prompts user for password to access encrypted credentials files
 def prompt_password():
     password = getpass.getpass("Enter Password: ")
@@ -195,20 +200,38 @@ def configure_user(config, args):
     if os.path.exists("config.user.jsn"):
         config_user = jsn.loads(open("config.user.jsn", "r").read())
         util.merge_dicts(config, config_user)
-        
-        
-# stub for jobs to do nothing
-def stub(config):
-    pass
-    
+
+
+# expand args evaluating %{input_file}, %{output_file} and %{export_args}
+def expand_args(args, input_file, output_file):
+    print(args)
+    cmd = ""
+    for arg in args:
+        arg = arg.replace("%{input_file}", input_file)
+        arg = arg.replace("%{output_file}", output_file)
+        if arg.find("%{export_args}") != -1:
+            arg = "-t RGBA8"
+        cmd += arg + " "
+    return cmd
+
 
 # runs a generic tool
-def run(config, task_name, tool, files):
+def run_tool(config, task_name, tool, files):
     exe = config["tools"][tool]
-    cmd = exe + " "
-    for arg in config[task_name]["args"]:
-        cmd += arg + " "
     for file in files:
+        cmd = exe + " "
+        cmd += expand_args(config[task_name]["args"], file[0], file[1])
+        print(cmd)
+        # p = subprocess.Popen(cmd, shell=True)
+        # p.wait()
+
+
+# runs shell commands in the current environment
+def shell(config, task_name):
+    commands = config[task_name]["commands"]
+    if type(commands) != list:
+        print("[error] shell must be array of strings")
+    for cmd in commands:
         p = subprocess.Popen(cmd, shell=True)
         p.wait()
 
@@ -261,6 +284,9 @@ def main():
     scripts = {
         "copy": copy,
         "connect_to_server": connect_to_server,
+        "make": None,
+        "lunch": None,
+        "shell": shell
     }
 
     # add extensions
@@ -288,11 +314,9 @@ def main():
         task_type = task["type"]
         if task_type in config["tools"].keys():
             if "files" in task.keys():
-                print("for files job " + task_name)
-                # run(config, task_name, task_type, [""])
+                run_tool(config, task_name, task_type, get_task_files(config, task_name))
             else:
-                print("single run job " + task_name)
-                # run(config, task_name, task_type, [""])
+                run_tool(config, task_name, task_type, [""])
         elif task_type in scripts.keys():
             if "files" in task.keys():
                 scripts.get(task_type)(config, task_name, get_task_files(config, task_name))
@@ -305,8 +329,5 @@ def main():
 
 # entry point of pmbuild
 if __name__ == "__main__":
-    print("--------------------------------------------------------------------------------")
-    print("pmbuild (v4) -------------------------------------------------------------------")
-    print("--------------------------------------------------------------------------------")
-    print("")
+    util.print_header("pmbuild (v4)")
     main()
