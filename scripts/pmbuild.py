@@ -2,19 +2,20 @@ import time
 import json
 import sys
 import subprocess
-import util
-import jsn.jsn as jsn
 import getpass
 import base64
 import os
-import cryptography
 import importlib
 import glob
 import re
 import shutil
+import cryptography
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import util
+import jsn.jsn as jsn
+import cgu.cgu as cgu
 
 
 # stub for jobs to do nothing
@@ -90,102 +91,146 @@ def edit_credentials():
     file.write(token)
 
 
-# connects to a network location via smb, net use
-def connect_to_server(config, task_name):
-    print("hello")
-    cfg = config[task_name]
+# writes a required value input by the user, into config.user.jsn
+def update_user_config(k, v, config):
+    config[k] = v
+    user = dict()
+    if os.path.exists("config.user.jsn"):
+        user = jsn.loads(open("config.user.jsn", "r").read())
+    user[k] = v
+    bj = open("config.user.jsn", "w+")
+    bj.write(json.dumps(user, indent=4))
+    bj.close()
 
-    '''
-    if not os.path.exists(cfg["project"]):
-        if os.name == "posix":
-            cmd = "open " + util.inQuotes("smb://" + cfg["user"] + ":" + cfg["password"] + "@" + cfg["address"] + "/" + cfg["mount"])
-            p = subprocess.Popen(cmd, shell=True)
-            e = p.wait()
+
+# locate latest version of the windows sdk
+def locate_windows_sdk():
+    pf_env = ["PROGRAMFILES", "PROGRAMFILES(X86)"]
+    sdk = "Windows Kits"
+    sdk_dir = None
+    for v in pf_env:
+        print(v)
+        d = os.environ[v]
+        if d:
+            if sdk in os.listdir(d):
+                print(sdk)
+                print(d)
+                sdk_dir = os.path.join(d, sdk)
+                break
+    if sdk_dir:
+        versions = sorted(os.listdir(sdk_dir), reverse=False)
+        if len(versions) > 0:
+            if versions[0] == "10":
+                # windows 10 has sub versions
+                source = os.path.join(sdk_dir, versions[0], "Source")
+                if os.path.exists(source):
+                    sub_versions = sorted(os.listdir(source), reverse=False)
+                    if len(sub_versions) > 0:
+                        return str(sub_versions[0])
+            else:
+                # 8.1
+                return str(versions[0])
+    return None
+
+
+# windows only, prompt user to supply their windows sdk version
+def configure_windows_sdk(config):
+    if "sdk_version" in config.keys():
+        return
+    # attempt to auto locate
+    auto_sdk = locate_windows_sdk()
+    if auto_sdk:
+        update_user_config("sdk_version", auto_sdk, config)
+        return
+    print("Windows SDK version not set.")
+    print("Please enter the windows sdk you want to use.")
+    print("You can find available sdk versions in:")
+    print("Visual Studio > Project Properties > General > Windows SDK Version.")
+    input_sdk = str(input())
+    update_user_config("sdk_version", input_sdk, config)
+    return
+
+
+# find visual studio installation directory
+def locate_vs_root():
+    pf_env = ["PROGRAMFILES", "PROGRAMFILES(X86)"]
+    vs = "Microsoft Visual Studio"
+    vs_dir = ""
+    for v in pf_env:
+        d = os.environ[v]
+        if d:
+            if vs in os.listdir(d):
+                vs_dir = os.path.join(d, vs)
+                break
+    return vs_dir
+
+
+# find latest visual studio version
+def locate_vs_latest():
+    vs_dir = locate_vs_root()
+    if len(vs_dir) == 0:
+        print("[warning]: could not auto locate visual studio, using vs2017 as default")
+        return "vs2017"
+    supported = ["2017", "2019"]
+    versions = sorted(os.listdir(vs_dir), reverse=False)
+    for v in versions:
+        if v in supported:
+            return "vs" + v
+
+
+# attempt to locate vc vars all by looking in program files, and finding visual studio installations
+def locate_vc_vars_all():
+    vs_dir = locate_vs_root()
+    if len(vs_dir) == 0:
+        return None
+    pattern = os.path.join(vs_dir, "**/vcvarsall.bat")
+    # if we reverse sort then we get the latest vs version
+    vc_vars = sorted(glob.glob(pattern, recursive=True), reverse=False)
+    if len(vc_vars) > 0:
+        return vc_vars[0]
+    return None
+
+
+# windows only, configure vcvarsall directory for commandline vc compilation
+def configure_vc_vars_all(config):
+    # already exists
+    if "vcvarsall_dir" in config.keys():
+        if os.path.exists(config["vcvarsall_dir"]):
+            return
+    # attempt to auto locate
+    auto_vc_vars = locate_vc_vars_all()
+    if auto_vc_vars:
+        auto_vc_vars = os.path.dirname(auto_vc_vars)
+        update_user_config("vcvarsall_dir", auto_vc_vars, config)
+        return
+    # user input
+    while True:
+        print("Cannot find 'vcvarsall.bat'")
+        print("Please enter the full path to the msvc installation directory containing vcvarsall.bat")
+        input_dir = str(input())
+        input_dir = input_dir.strip("\"")
+        input_dir = os.path.normpath(input_dir)
+        if os.path.isfile(input_dir):
+            input_dir = os.path.dirname(input_dir)
+        if os.path.exists(input_dir):
+            update_user_config("vcvarsall_dir", input_dir, config)
+            return
         else:
-            cmd = "net use " + cfg["address"] + " /user:" + cfg["user"] + " " + cfg["password"]
-            p = subprocess.Popen(cmd, shell=True)
-            e = p.wait()
-    # tries until we get permission
-    tries = 10
-    while tries > 0:
-        try:
-            os.listdir(cfg["project"])
-            break
-        except (PermissionError, FileNotFoundError):
             time.sleep(1)
-            tries -= 1
-            if tries < 0:
-                print("error: media server is not connected")
-                return
-    print("success: media server connected")
-    _mediaServerConnected = True
-    '''
 
 
-# copes files from src to destination only if newer
-def copy(config, task_name, files):
-    for file in files:
-        util.copy_file_create_dir_if_newer(file[0], file[1])
-
-
-# deletes files and directories specified in files
-def clean(config, task_name):
-    clean_task = config[task_name]
-    if "files" in clean_task:
-        files = get_task_files(config, task_name)
-    if "directories" in clean_task:
-        for dir in clean_task["directories"]:
-            shutil.rmtree(dir, ignore_errors=True)
-
-
-# takes a taks files objects and extracts a file list from directory, single files, glob or regex
-def get_task_files(config, task_name):
-    outputs = []
-    files_array = config[task_name]["files"]
-    sanitized_outputs = []
-    for files_task in files_array:
-        if type(files_task) == dict:
-            print("regex!")
-            regex = re.compile(files_task["match"])
-            file_list = []
-            for root, dirs, files in os.walk(files_task["directory"]):
-                for file in files:
-                    file_list.append(util.sanitize_file_path(os.path.join(root, file)))
-            for file in file_list:
-                if re.match(regex, file):
-                    res = file
-                    for sub in files_task["sub"]:
-                        pattern = re.compile(sub[0])
-                        res = re.sub(pattern, sub[1], res)
-                    sanitized_outputs.append((file, util.sanitize_file_path(res)))
-        else:
-            if len(files_task) != 2:
-                print("ERROR: file tasks must be an array of size 2 [src, dst]")
-                exit(1)
-            inputs = glob.glob(files_task[0], recursive=True)
-            if len(inputs) > 1:
-                for src in inputs:
-                    src_glob_pos = files_task[0].find("*")
-                    src_root = util.sanitize_file_path(files_task[0][:src_glob_pos - 1])
-                    dst_root = util.sanitize_file_path(files_task[1])
-                    src = util.sanitize_file_path(src)
-                    rp = src.find(src_root) + len(src_root)
-                    dst = src[:rp].replace(src_root, dst_root) + src[rp:]
-                    outputs.append((src, dst))
-            elif len(inputs) == 1:
-                if os.path.isdir(files_task[0]):
-                    # dir
-                    for root, dirs, files in os.walk(files_task[0]):
-                        for file in files:
-                            src = util.sanitize_file_path(os.path.join(root, file))
-                            dst = src.replace(util.sanitize_file_path(files_task[0]), util.sanitize_file_path(files_task[1]))
-                            outputs.append((src, dst))
-                else:
-                    # single file
-                    outputs.append((files_task[0], files_task[1]))
-            for pair in outputs:
-                sanitized_outputs.append((util.sanitize_file_path(pair[0]), util.sanitize_file_path(pair[1])))
-    return sanitized_outputs
+# apple only, ask user for their team id to insert into xcode projects
+def configure_teamid(config):
+    if "teamid" in config.keys():
+        return
+    print("Apple Developer Team ID not set.")
+    print("Please enter your development team ID ie. (5B1Y99TY8K)")
+    print("You can find team id's or personal team id on the Apple Developer website")
+    print("Optionally leave this blank and you select a team later in xcode:")
+    print("  Project > Signing & Capabilities > Team")
+    input_sdk = str(input())
+    update_user_config("teamid", input_sdk, config)
+    return
 
 
 # configure user settings for each platform
@@ -202,15 +247,202 @@ def configure_user(config, args):
         util.merge_dicts(config, config_user)
 
 
+# connects to a network location via smb, net use
+def connect_to_server(config, task_name):
+    cfg = config[task_name]
+    if not os.path.exists(cfg["project"]):
+        if os.name == "posix":
+            cmd = "open " + cgu.in_quotes("smb://" + cfg["user"] + ":" + cfg["password"] + "@" + cfg["address"] + "/" + cfg["mount"])
+            p = subprocess.Popen(cmd, shell=True)
+            e = p.wait()
+        else:
+            cmd = "net use " + cfg["address"] + " /user:" + cfg["user"] + " " + cfg["password"]
+            p = subprocess.Popen(cmd, shell=True)
+            e = p.wait()
+    # tries until we get permission
+    tries = 10
+    while tries > 0:
+        try:
+            os.listdir(cfg["project"])
+            break
+        except (PermissionError, FileNotFoundError):
+            time.sleep(1)
+            tries -= 1
+            if tries < 0:
+                print("error: server is not connected")
+                return
+    print("success: server connected")
+
+
+# copes files from src to destination only if newer
+def copy(config, task_name, files):
+    for file in files:
+        util.copy_file_create_dir_if_newer(file[0], file[1])
+
+
+# deletes files and directories specified in files
+def clean(config, task_name):
+    clean_task = config[task_name]
+    if "files" in clean_task:
+        files = get_task_files(config, task_name)
+    if "directories" in clean_task:
+        for directory in clean_task["directories"]:
+            shutil.rmtree(directory, ignore_errors=True)
+
+
+# gets file list for task parsing a regex
+def get_task_files_regex(files_task):
+    regex = re.compile(files_task["match"])
+    file_list = util.walk(files_task["directory"])
+    pairs = []
+    for file in file_list:
+        if re.match(regex, file):
+            res = file
+            for sub in files_task["sub"]:
+                pattern = re.compile(sub[0])
+                res = re.sub(pattern, sub[1], res)
+            pairs.append((util.sanitize_file_path(file), util.sanitize_file_path(res)))
+    return pairs
+
+
+# gets file list for task parsing a glob
+def get_task_files_glob(files_task):
+    pairs = []
+    inputs = glob.glob(files_task[0], recursive=True)
+    for src in inputs:
+        src_glob_pos = files_task[0].find("*")
+        src_root = util.sanitize_file_path(files_task[0][:src_glob_pos - 1])
+        dst_root = util.sanitize_file_path(files_task[1])
+        src = util.sanitize_file_path(src)
+        rp = src.find(src_root) + len(src_root)
+        dst = src[:rp].replace(src_root, dst_root) + src[rp:]
+        pairs.append((util.sanitize_file_path(src), util.sanitize_file_path(dst)))
+    return pairs
+
+
+# gets task files from a directory, or a single file
+def get_task_files_raw(files_task):
+    pairs = []
+    if os.path.isdir(files_task[0]):
+        # dir
+        file_list = util.walk(files_task[0])
+        for file in file_list:
+            src = file
+            dst = src.replace(util.sanitize_file_path(files_task[0]), util.sanitize_file_path(files_task[1]))
+            pairs.append((src, dst))
+    else:
+        # single file
+        pairs.append((util.sanitize_file_path(files_task[0]), util.sanitize_file_path(files_task[1])))
+    return pairs
+
+
+# takes a tasks files objects and extracts a tuple(input, output) list from directory, single files, glob or regex
+def get_task_files(config, task_name):
+    files_array = config[task_name]["files"]
+    pairs = []
+    for files_task in files_array:
+        if type(files_task) == dict:
+            pairs.extend(get_task_files_regex(files_task))
+        else:
+            if len(files_task) != 2:
+                print("ERROR: file tasks must be an array of size 2 [src, dst]")
+                exit(1)
+            if files_task[0].find("*") != -1:
+                pairs.extend(get_task_files_glob(files_task))
+            else:
+                pairs.extend(get_task_files_raw(files_task))
+    if util.value_with_default("strip_ext", config[task_name], False):
+        stripped = []
+        for output in pairs:
+            stripped.append((output[0], os.path.splitext(output[1])[0]))
+        pairs = stripped
+    return pairs
+
+
+# returns expanded list of file from matches where each list element of files can be a glob, regex match or single file
+def expand_rules_files(export_config, task_name, subdir):
+    if "rules" not in export_config[task_name]:
+        return
+    rules = export_config[task_name]["rules"]
+    for rule in rules.keys():
+        rule_config = rules[rule]
+        expanded_files = []
+        for file_match in rule_config["files"]:
+            if type(file_match) == list:
+                regex = re.compile(file_match[0])
+                file_list = util.walk(subdir)
+                for file in file_list:
+                    if re.match(regex, file):
+                        expanded_files.append(file)
+            elif file_match.find("*") != -1:
+                expanded_files.extend(glob.glob(os.path.join(subdir, file_match), recursive=True))
+            else:
+                expanded_files.append(os.path.join(subdir, file_match))
+        rule_config["files"] = []
+        for file in expanded_files:
+            rule_config["files"].append(file)
+
+
+# look for export.json in directory tree, combine and override exports by depth, override further by rules
+def export_config_for_directory(task_name, directory):
+    file_path = util.sanitize_file_path(directory)
+    dirt_tree = file_path.split(os.sep)
+    export_dict = dict()
+    subdir = ""
+    for i in range(0, len(dirt_tree)):
+        subdir = os.path.join(subdir, dirt_tree[i])
+        export = os.path.join(subdir, "export.jsn")
+        if os.path.exists(export):
+            dir_export_config = jsn.loads(open(export, "r").read())
+            expand_rules_files(dir_export_config, task_name, subdir)
+            util.merge_dicts(export_dict, dir_export_config)
+    return export_dict
+
+
+# apply config rules for file
+def apply_export_config_rules(export_config, task_name, filename):
+    cfg = export_config[task_name]
+    file_config = dict()
+    for key in cfg.keys():
+        if key == "rules":
+            continue
+        file_config[key] = cfg[key]
+    if "rules" in export_config[task_name]:
+        rules = export_config[task_name]["rules"]
+        for rule in rules.keys():
+            rule_config = rules[rule]
+            files = rule_config["files"]
+            if filename in files:
+                util.merge_dicts(file_config, rule_config)
+                file_config.pop("files", None)
+    return file_config
+
+
+# get file specific export config from the nested directory structure, apply rules to specific files
+def export_config_for_file(task_name, filename):
+    dir_config = export_config_for_directory(task_name, os.path.dirname(filename))
+    file_config = apply_export_config_rules(dir_config, task_name, filename)
+    return file_config
+
+
 # expand args evaluating %{input_file}, %{output_file} and %{export_args}
-def expand_args(args, input_file, output_file):
-    print(args)
+def expand_args(args, task_name, input_file, output_file):
     cmd = ""
     for arg in args:
         arg = arg.replace("%{input_file}", input_file)
         arg = arg.replace("%{output_file}", output_file)
         if arg.find("%{export_args}") != -1:
-            arg = "-t RGBA8"
+            export_config = export_config_for_file(task_name, input_file)
+            arg = ""
+            for export_arg in export_config.keys():
+                val = " " + str(export_config[export_arg])
+                if type(export_config[export_arg]) == bool:
+                    if not export_config[export_arg]:
+                        continue
+                    else:
+                        val = ""
+                arg += export_arg + val + " "
+            arg = arg.strip()
         cmd += arg + " "
     return cmd
 
@@ -220,10 +452,11 @@ def run_tool(config, task_name, tool, files):
     exe = config["tools"][tool]
     for file in files:
         cmd = exe + " "
-        cmd += expand_args(config[task_name]["args"], file[0], file[1])
+        cmd += expand_args(config[task_name]["args"], task_name, file[0], file[1])
+        util.create_dir(file[1])
         print(cmd)
-        # p = subprocess.Popen(cmd, shell=True)
-        # p.wait()
+        p = subprocess.Popen(cmd, shell=True)
+        p.wait()
 
 
 # runs shell commands in the current environment

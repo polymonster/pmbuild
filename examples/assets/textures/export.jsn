@@ -9,7 +9,7 @@
 			compess:
 			{
 				files: [
-					"pbr/*.png"
+					"pbr/*.png",
 				]
 				
 				"-t": "BC3"
@@ -32,6 +32,15 @@
 				]
 				
 				"--mips": false
+			},
+			
+			regex:
+			{
+				files: [
+					['^.+?test_bg\\.(.*)']
+				],
+				
+				"--linear": true
 			}
 		}
 	}

@@ -1,5 +1,0 @@
-{
-    format: "RGBA8",
-    mips: true,
-    texturec: "--max 1024 "
-}

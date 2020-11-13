@@ -77,6 +77,7 @@
 		{
 			commands: [ 
 				"echo hello_world",
+				"ls",
 				"pwd",
 				"git status"
 			]
@@ -87,12 +88,14 @@
 			args: [
 				"-f %{input_file}",
 				"%{export_args}",
-				"-o %{output_file}"
+				"-o %{output_file}.dds"
 			]
 			
 			files: [
 				["assets/textures/**/*.*", "bin/textures"]
 			]
+			
+			strip_ext: true
 		}
 	}
 }

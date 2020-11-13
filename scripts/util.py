@@ -107,6 +107,22 @@ def merge_dicts(dest, second):
 # change file extension to ext
 def change_ext(file, ext):
     return os.path.splitext(file)[0] + ext
+
+
+# safely returns a dictionary value with a default of the key does not exist
+def value_with_default(key, dictionary, default_value):
+    if key in dictionary.keys():
+        return dictionary[key]
+    return default_value
+
+
+# returns list of files with full file path from recursive directory walk
+def walk(directory):
+    file_list = []
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            file_list.append(sanitize_file_path(os.path.join(root, file)))
+    return file_list
     
 
 # print duration of job, ts is start time
