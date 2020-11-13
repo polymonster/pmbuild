@@ -83,6 +83,14 @@
 			]
 		}
 		
+		connect_server:
+		{
+			type: connect,
+			address: "server.lan",
+			mount: "third_party_libs",
+			credentials: "TVShareReadOnly"
+		}
+		
 		texturec:
 		{
 			args: [

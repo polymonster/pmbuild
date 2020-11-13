@@ -4,27 +4,32 @@ import shutil
 import time
 
 
+# gets path for a network location based on server and folder, /Volumes/folder (mac) \\192.168.0.1\folder (windows)
+def get_platform_network_path(server, folder):
+    path_formats = {
+        "Darwin": "/Volumes/" + folder,
+        "Windows": "\\\\" + server + "\\" + folder,
+        "Linux": "/" + folder
+    }
+    return path_formats[platform.system()]
+
+
+# gets the platform name running this script as (windows, mac or linux)
+def get_platform_name():
+    names = {
+        "Darwin": "mac",
+        "Windows": "windows",
+        "Linux": "linux"
+    }
+    return names[platform.system()]
+
+
 # get platform name, allowing user override from the commandline
 def get_platform_name_args(args):
     for i in range(1, len(args)):
         if "-platform" in args[i]:
             return args[i + 1]
-    plat = "win32"
-    if os.name == "posix":
-        plat = "osx"
-        if platform.system() == "Linux":
-            plat = "linux"
-    return plat
-
-
-# gets the platform name running this script as (win32, osx, or linux)
-def get_platform_name():
-    plat = "win32"
-    if os.name == "posix":
-        plat = "osx"
-        if platform.system() == "Linux":
-            plat = "linux"
-    return plat
+    return get_platform_name()
 
 
 # replaces / with \ for windows friendly file paths

@@ -38,6 +38,8 @@ def prompt_password():
 
 # reads and decodes credentials into dict, taking key from prompt_password
 def read_and_decode_credentials(key):
+    if not key:
+        key = prompt_password()
     f = Fernet(key)
     if os.path.exists("credentials.bin"):
         while True:
@@ -238,7 +240,7 @@ def configure_user(config, args):
     config_user = dict()
     if os.path.exists("config.user.jsn"):
         config_user = jsn.loads(open("config.user.jsn", "r").read())
-    if util.get_platform_name() == "win32":
+    if util.get_platform_name() == "windows":
         if "-msbuild" not in sys.argv:
             configure_vc_vars_all(config_user)
             configure_windows_sdk(config_user)
@@ -248,22 +250,27 @@ def configure_user(config, args):
 
 
 # connects to a network location via smb, net use
-def connect_to_server(config, task_name):
+def connect(config, task_name):
     cfg = config[task_name]
-    if not os.path.exists(cfg["project"]):
+    mount_path = util.get_platform_network_path(cfg["address"], cfg["mount"])
+    if not os.path.exists(mount_path):
+        user_pass = ""
+        if "credentials" in cfg:
+            j = lookup_credentials(cfg["credentials"])
+            user_pass = cfg["credentials"] + ":" + str(j) + "@"
         if os.name == "posix":
-            cmd = "open " + cgu.in_quotes("smb://" + cfg["user"] + ":" + cfg["password"] + "@" + cfg["address"] + "/" + cfg["mount"])
+            cmd = "open " + cgu.in_quotes("smb://" + user_pass + cfg["address"] + "/" + cfg["mount"])
             p = subprocess.Popen(cmd, shell=True)
-            e = p.wait()
+            p.wait()
         else:
             cmd = "net use " + cfg["address"] + " /user:" + cfg["user"] + " " + cfg["password"]
             p = subprocess.Popen(cmd, shell=True)
-            e = p.wait()
+            p.wait()
     # tries until we get permission
     tries = 10
     while tries > 0:
         try:
-            os.listdir(cfg["project"])
+            os.listdir(mount_path)
             break
         except (PermissionError, FileNotFoundError):
             time.sleep(1)
@@ -516,7 +523,7 @@ def main():
     # core scripts
     scripts = {
         "copy": copy,
-        "connect_to_server": connect_to_server,
+        "connect": connect,
         "make": None,
         "lunch": None,
         "shell": shell
