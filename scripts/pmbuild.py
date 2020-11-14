@@ -10,17 +10,14 @@ import glob
 import re
 import shutil
 import cryptography
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import util
 import jsn.jsn as jsn
 import cgu.cgu as cgu
+import dependencies
 
-
-# stub for jobs to do nothing
-def stub(config):
-    pass
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 
 # prompts user for password to access encrypted credentials files
@@ -456,12 +453,18 @@ def expand_args(args, task_name, input_file, output_file):
 
 # runs a generic tool
 def run_tool(config, task_name, tool, files):
+    deps = True
     exe = config["tools"][tool]
     for file in files:
         cmd = exe + " "
         cmd += expand_args(config[task_name]["args"], task_name, file[0], file[1])
         util.create_dir(file[1])
-        print(cmd)
+        if deps:
+            d = dependencies.create_dependency_single(file[0], file[1], cmd)
+            if dependencies.check_up_to_date_single(file[1], d):
+                continue
+            dependencies.write_to_file_single(d, file[1])
+        util.log_lvl(cmd, config, "-verbose")
         p = subprocess.Popen(cmd, shell=True)
         p.wait()
 
@@ -488,14 +491,36 @@ def main():
     # load jsn, inherit etc
     config_all = jsn.loads(open("config.jsn", "r").read())
 
+    # special args passed from user
+    special_args = [
+        "-credentials",
+        "-help",
+        "-verbose",
+        "-dry",
+        "-silent",
+        "-cfg",
+        "-clean",
+        "-all"
+    ]
+
+    for arg in reversed(special_args):
+        if arg not in sys.argv:
+            special_args.remove(arg)
+        else:
+            sys.argv.remove(arg)
+
+    # add implicit all
+    if len(sys.argv) == 2:
+        special_args.append("-all")
+
     # special modes
-    if "-credentials" in sys.argv:
+    if "-credentials" in special_args:
         edit_credentials()
         return
 
     # switch between help and run mode
     call = "run"
-    if "-help" in sys.argv:
+    if "-help" in special_args:
         call = "help"
         
     # first arg is build profile, load profile and merge the config for platform
@@ -515,9 +540,13 @@ def main():
         if "type" not in task.keys():
             config[task_name]["type"] = task_name
 
+    config["special_args"] = special_args
+
     # obtain tools for this platform
     config["tools"] = config_all["tools"]
-    if "-cfg" in sys.argv:
+    if "-cfg" in special_args:
+        print(sys.argv)
+        print(special_args)
         print(json.dumps(config, indent=4))
 
     # core scripts
@@ -536,7 +565,7 @@ def main():
         scripts[ext_name] = getattr(ext_module, ext["function"])
 
     # cleans are special operations which runs first
-    if "-clean" in sys.argv:
+    if "-clean" in special_args:
         for task_name in config.keys():
             task = config[task_name]
             if "type" not in task:
@@ -545,10 +574,25 @@ def main():
                 util.print_header(task_name)
                 clean(config, task_name)
 
-    # run tasks
+    # filter tasks
+    runnable = []
     for task_name in config.keys():
         task = config[task_name]
         if "type" not in task:
+            continue
+        if "type" == "clean":
+            continue
+        if "-n" + task_name in sys.argv:
+            continue
+        if "-" + task_name in sys.argv or "-all" in special_args:
+            runnable.append(task_name)
+
+    # run tasks
+    for task_name in runnable:
+        task = config[task_name]
+        if "type" not in task:
+            continue
+        if "type" == "clean":
             continue
         util.print_header(task_name)
         task_type = task["type"]

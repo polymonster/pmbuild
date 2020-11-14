@@ -1,5 +1,7 @@
 import os
 import json
+import util
+import pmbuild
 
 default_settings = dict()
 default_settings["textures_dir"] = "assets/textures/"
@@ -92,6 +94,19 @@ def create_dependency_info(inputs, outputs, cmdline=""):
     return info
 
 
+def create_dependency_single(input, output, cmdline=""):
+    info = dict()
+    info["cmdline"] = cmdline
+    info["files"] = dict()
+    o = output
+    info["files"][o] = []
+    i = input
+    ii = create_info(i)
+    ii["data_file"] = o[o.find(os.sep + "data" + os.sep) + 1:]
+    info["files"][o].append(ii)
+    return info
+
+
 def check_up_to_date(dependencies, dest_file):
     filename = os.path.join(dependencies["dir"], "dependencies.json")
     if not os.path.exists(filename):
@@ -118,8 +133,7 @@ def check_up_to_date(dependencies, dest_file):
 
 
 def check_up_to_date_single(dest_file, deps):
-    dest_file = sanitize_filename(dest_file)
-    dep_filename = dest_file.replace(os.path.splitext(dest_file)[1], ".dep")
+    dep_filename = util.change_ext(dest_file, ".dep")
     if not os.path.exists(dep_filename):
         print(os.path.basename(dest_file) + ": deps does not exist.")
         return False
@@ -170,6 +184,7 @@ def write_to_file(dependencies):
 
 
 def write_to_file_single(deps, file):
+    file = util.change_ext(file, ".dep")
     output_d = open(file, 'wb+')
     output_d.write(bytes(json.dumps(deps, indent=4), 'UTF-8'))
     output_d.close()

@@ -145,5 +145,16 @@ def print_header(task_name):
     print("--------------------------------------------------------------------------------")
 
 
+# prints a message handling verbose only, or silent modes
+def log_lvl(msg, config, verbosity=None):
+    special_args = config["special_args"]
+    if verbosity:
+        if verbosity in special_args:
+            print(msg)
+            return
+    if "-silent" not in special_args:
+        print(msg)
+
+
 if __name__ == "__main__":
     print("util")
