@@ -4,7 +4,8 @@
 	{
 		premake: "../bin/premake5"
 		texturec: "../bin/texturec"
-		pmfx: "python3 "
+		pmfx: "python3 ",
+		ffmpeg: "ffmpeg"
 	}
 	
 	// use <mac> <windows> or <linux> to specify objects for the specific platform
@@ -12,7 +13,8 @@
 	{
 		premake: "../bin/premake5.exe"
 		texturec: "../bin/texturec.exe"
-		pmfx: "py -3 "
+		pmfx: "py -3 ",
+		ffmpeg: "ffmpeg.exe"
 	}
 	
 	// register extension python modules
@@ -104,6 +106,46 @@
 			]
 			
 			strip_ext: true
+		}
+	}
+	
+	videos:
+	{
+		ffmpeg:
+		{
+			type: ffmpeg
+			
+			args: [
+				"-i %{input_file}",
+				"%{export_args}",
+				"%{output_file}"
+			],
+			
+			change_ext: ".mp4"
+		}
+		
+		x265-1080(ffmpeg):
+		{
+			files: [
+				["assets/videos/**/*.mp4", "bin/videos/x265_1080"],
+				["assets/videos/**/*.webm", "bin/videos/x265_1080"]
+			]
+		}
+		
+		x265-720(ffmpeg):
+		{		
+			files: [
+				["assets/videos/**/*.mp4", "bin/videos/x265_720"],
+				["assets/videos/**/*.webm", "bin/videos/x265_720"]
+			]
+		}
+	
+		x264-480(ffmpeg):
+		{		
+			files: [
+				["assets/videos/**/*.mp4", "bin/videos/x264_480"],
+				["assets/videos/**/*.webm", "bin/videos/x264_480"]
+			]
 		}
 	}
 }

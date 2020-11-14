@@ -355,10 +355,14 @@ def get_task_files(config, task_name):
                 pairs.extend(get_task_files_glob(files_task))
             else:
                 pairs.extend(get_task_files_raw(files_task))
-    if util.value_with_default("strip_ext", config[task_name], False):
+    change_ext = ""
+    if util.value_with_default("change_ext", config[task_name], False):
+        change_ext = config[task_name]["change_ext"]
+    if util.value_with_default("strip_ext", config[task_name], False) or len(change_ext) > 0:
         stripped = []
         for output in pairs:
-            stripped.append((output[0], os.path.splitext(output[1])[0]))
+            changed = util.change_ext(output[1], change_ext)
+            stripped.append((output[0], changed))
         pairs = stripped
     return pairs
 
@@ -368,6 +372,7 @@ def expand_rules_files(export_config, task_name, subdir):
     if "rules" not in export_config[task_name]:
         return
     rules = export_config[task_name]["rules"]
+    presets = export_config[task_name]["presets"]
     for rule in rules.keys():
         rule_config = rules[rule]
         expanded_files = []
@@ -385,6 +390,13 @@ def expand_rules_files(export_config, task_name, subdir):
         rule_config["files"] = []
         for file in expanded_files:
             rule_config["files"].append(file)
+        # expand preset
+        if "preset" in rule_config.keys():
+            if rule_config["preset"] in presets:
+                for key in presets[rule_config["preset"]].keys():
+                    rule_config[key] = presets[rule_config["preset"]][key]
+            rule_config.pop("preset")
+    export_config[task_name].pop("presets")
 
 
 # look for export.json in directory tree, combine and override exports by depth, override further by rules
@@ -425,6 +437,7 @@ def apply_export_config_rules(export_config, task_name, filename):
 # get file specific export config from the nested directory structure, apply rules to specific files
 def export_config_for_file(task_name, filename):
     dir_config = export_config_for_directory(task_name, os.path.dirname(filename))
+    print(json.dumps(dir_config, indent=4))
     file_config = apply_export_config_rules(dir_config, task_name, filename)
     return file_config
 
@@ -463,10 +476,12 @@ def run_tool(config, task_name, tool, files):
             d = dependencies.create_dependency_single(file[0], file[1], cmd)
             if dependencies.check_up_to_date_single(file[1], d):
                 continue
-            dependencies.write_to_file_single(d, file[1])
         util.log_lvl(cmd, config, "-verbose")
         p = subprocess.Popen(cmd, shell=True)
-        p.wait()
+        e = p.wait()
+        if e == 0:
+            dependencies.write_to_file_single(d, file[1])
+
 
 
 # runs shell commands in the current environment

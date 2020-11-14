@@ -1,0 +1,44 @@
+{
+    "x265-1080": {
+        "-c:v": "libx265",
+        "-b:v": "4M",
+        "-pix_fmt": "yuv420p",
+        "-vf": "scale=1920:1080",
+        "-vtag": "hvc1",
+        "-an": true
+    },
+    "x265-720": {
+        "presets": {
+            "default": {
+                "-c:v": "libx265",
+                "-b:v": "4M",
+                "-pix_fmt": "yuv420p",
+                "-vf": "scale=1920:1080",
+                "-vtag": "hvc1"
+            },
+            "remove_audio": {
+                "-an": true
+            }
+        },
+        "rules": {
+            "use_preset": {
+                "preset": "default",
+                "files": [
+                    "**/*.webm"
+                ]
+            },
+            "remove_audio": {
+                "preset": "default",
+                "files": [
+                    "**/*.mp4"
+                ]
+            }
+        }
+    },
+    "x264-480": {
+        "-c:v": "libx264",
+        "-b:v": "2M",
+        "-pix_fmt": "yuv420p",
+        "-vf scale=": "854:480"
+    }
+}
