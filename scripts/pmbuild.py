@@ -466,12 +466,13 @@ def expand_args(args, task_name, input_file, output_file):
 
 # runs a generic tool
 def run_tool(config, task_name, tool, files):
-    deps = True
+    deps = util.value_with_default("dependencies", config[task_name], False)
     exe = config["tools"][tool]
     for file in files:
         cmd = exe + " "
         cmd += expand_args(config[task_name]["args"], task_name, file[0], file[1])
-        util.create_dir(file[1])
+        if len(file[1]) > 0:
+            util.create_dir(file[1])
         if deps:
             d = dependencies.create_dependency_single(file[0], file[1], cmd)
             if dependencies.check_up_to_date_single(file[1], d):
@@ -479,7 +480,7 @@ def run_tool(config, task_name, tool, files):
         util.log_lvl(cmd, config, "-verbose")
         p = subprocess.Popen(cmd, shell=True)
         e = p.wait()
-        if e == 0:
+        if e == 0 and deps:
             dependencies.write_to_file_single(d, file[1])
 
 
@@ -615,7 +616,7 @@ def main():
             if "files" in task.keys():
                 run_tool(config, task_name, task_type, get_task_files(config, task_name))
             else:
-                run_tool(config, task_name, task_type, [""])
+                run_tool(config, task_name, task_type, [("", "")])
         elif task_type in scripts.keys():
             if "files" in task.keys():
                 scripts.get(task_type)(config, task_name, get_task_files(config, task_name))

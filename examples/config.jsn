@@ -4,8 +4,9 @@
 	{
 		premake: "../bin/premake5"
 		texturec: "../bin/texturec"
-		pmfx: "python3 ",
+		pmfx: "python3 ../bin/pmfx-shader/build_pmfx.py"
 		ffmpeg: "ffmpeg"
+		jsn: "../scripts/jsn/jsn"
 	}
 	
 	// use <mac> <windows> or <linux> to specify objects for the specific platform
@@ -13,8 +14,9 @@
 	{
 		premake: "../bin/premake5.exe"
 		texturec: "../bin/texturec.exe"
-		pmfx: "py -3 ",
+		pmfx: "py -3 ../bin/pmfx-shader/build_pmfx.py"
 		ffmpeg: "ffmpeg.exe"
+		jsn: "../scripts/jsn/jsn"
 	}
 	
 	// register extension python modules
@@ -42,9 +44,9 @@
 		{
 			type: copy
 			files: [
-				["assets/random_files/*.txt", "bin/text_files"],
-				["assets/random_files/*.json", "bin/json_files"],
-				["assets/random_files/*.xml", "bin/xml_files"],
+				["assets/random_files/*.txt", "bin/text_files"]
+				["assets/random_files/*.json", "bin/json_files"]
+				["assets/random_files/*.xml", "bin/xml_files"]
 			]
 		}
 		
@@ -56,7 +58,7 @@
 					match: '^.+?matchfile\\.(.*)'
 					directory: "assets"
 					sub: [
-						["assets/regex", "bin/regout"],
+						["assets/regex", "bin/regout"]
 						[".txt", ".newext"]
 					]
 				}
@@ -66,9 +68,22 @@
 		clean:
 		{
 			directories: [
-				"build",
+				"build"
 				"bin"
 			]
+		}
+		
+		jsn:
+		{
+			files: [
+				["assets/configs/*.jsn", "bin/configs"]
+			]
+			
+			args: [
+				"-i %{input_file} -o %{output_file} -p"
+			]
+			
+			dependencies: true
 		}
 	}
 	
@@ -78,26 +93,26 @@
 		shell: 
 		{
 			commands: [ 
-				"echo hello_world",
-				"ls",
-				"pwd",
+				"echo hello_world"
+				"ls"
+				"pwd"
 				"git status"
 			]
 		}
 		
 		connect_server:
 		{
-			type: connect,
-			address: "server.lan",
-			mount: "third_party_libs",
+			type: connect
+			address: "server.lan"
+			mount: "third_party_libs"
 			credentials: "TVShareReadOnly"
 		}
 		
 		texturec:
 		{
 			args: [
-				"-f %{input_file}",
-				"%{export_args}",
+				"-f %{input_file}"
+				"%{export_args}"
 				"-o %{output_file}.dds"
 			]
 			
@@ -106,6 +121,19 @@
 			]
 			
 			strip_ext: true
+		}
+		
+		pmfx:
+		{
+			args: [
+				"-platform osx"
+				"-shader_platform metal"
+				"-shader_version 2.1"
+				"-i assets/shaders"
+				"-o bin/shaders/metal"
+				"-h shader_structs"
+				"-t temp/metal"
+            ]
 		}
 	}
 	
@@ -116,18 +144,19 @@
 			type: ffmpeg
 			
 			args: [
-				"-i %{input_file}",
-				"%{export_args}",
+				"-i %{input_file}"
+				"%{export_args}"
 				"%{output_file}"
 			],
 			
 			change_ext: ".mp4"
+			dependencies: true
 		}
 		
 		x265-1080(ffmpeg):
 		{
 			files: [
-				["assets/videos/**/*.mp4", "bin/videos/x265_1080"],
+				["assets/videos/**/*.mp4", "bin/videos/x265_1080"]
 				["assets/videos/**/*.webm", "bin/videos/x265_1080"]
 			]
 		}
@@ -135,7 +164,7 @@
 		x265-720(ffmpeg):
 		{		
 			files: [
-				["assets/videos/**/*.mp4", "bin/videos/x265_720"],
+				["assets/videos/**/*.mp4", "bin/videos/x265_720"]
 				["assets/videos/**/*.webm", "bin/videos/x265_720"]
 			]
 		}
@@ -143,7 +172,7 @@
 		x264-480(ffmpeg):
 		{		
 			files: [
-				["assets/videos/**/*.mp4", "bin/videos/x264_480"],
+				["assets/videos/**/*.mp4", "bin/videos/x264_480"]
 				["assets/videos/**/*.webm", "bin/videos/x264_480"]
 			]
 		}

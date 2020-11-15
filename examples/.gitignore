@@ -3,3 +3,5 @@
 **.user.bin
 bin/
 build/
+temp/
+shader_structs/

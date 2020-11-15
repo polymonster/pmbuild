@@ -1,0 +1,402 @@
+{
+    blend_states:
+    {
+        disabled:
+        {
+            blend_enable: false,    
+        },
+        
+        additive:
+        {
+            blend_enable: true,
+            src_blend   : one,
+            dest_blend  : one
+        },
+        
+        alpha_blend:
+        {
+            blend_enable: true,
+            src_blend   : src_alpha,
+            dest_blend  : inv_src_alpha
+        }
+    },
+    
+    sampler_states:
+    {
+        wrap_linear:
+        {
+            filter : linear,
+            address: wrap
+        },
+        
+        wrap_point:
+        {
+            filter : point,
+            address: wrap
+        },
+        
+        clamp_linear:
+        {
+            filter : linear,
+            address: clamp
+        },
+        
+        clamp_point:
+        {
+            filter : point,
+            address: clamp
+        },
+        
+		clamp_linear_lod:
+        {
+            filter : linear_lod,
+            address: clamp
+        },
+        
+        shadow_compare:
+        {
+			filter : linear,
+            address: clamp,
+            comparison_func: less
+        }
+    },
+    
+    depth_stencil_states:
+    {
+        disabled:
+        {
+            depth_enable: false,
+        },
+        
+        default:
+        {
+            depth_enable: true,
+            depth_write : true,
+            depth_func  : "less"
+        },
+        
+        depth_never:
+        {
+            depth_enable: true,
+            depth_write : true,
+            depth_func  : "never"
+        },
+        
+        depth_always:
+        {
+            depth_enable: true,
+            depth_write : true,
+            depth_func  : "always"
+        },
+        
+        depth_equal:
+        {
+            depth_enable: true,
+            depth_write : false,
+            depth_func  : "equal"
+        },
+        
+        depth_always_no_write:
+        {
+            depth_enable: true,
+            depth_write : false,
+            depth_func  : "always"
+        },
+        
+        stencil_test:
+        {
+            depth_enable      : true,
+            depth_write       : true,
+            depth_func        : "always",
+            stencil_enable    : true,
+            stencil_write_mask: 0xff,
+            stencil_read_mask : 0xff,
+            
+            stencil_op:
+            {
+                stencil_fail: "keep",
+                depth_fail  : "keep",
+                stencil_pass: "replace",
+                stencil_func: "equal"
+            }
+        },
+    },
+    
+    raster_states:
+    {
+        default:
+        {
+            cull_mode: back,
+        },
+        
+        wireframe:
+        {
+            cull_mode: none,
+            fill_mode: wireframe
+        },
+        
+        front_face_cull:
+        {
+            cull_mode: front,
+            fill_mode: solid
+        },
+        
+        volume_raster:
+        {
+            cull_mode: back
+        },
+        
+        post_process:
+        {
+            cull_mode: none
+        },
+        
+        no_cull:
+        {
+            cull_mode: none
+        },
+        
+        disabled:
+        {
+            cull_mode: none
+        }
+    },
+    
+    render_targets:
+    {       
+    	single_shadow_map:
+    	{
+			size: [2048, 2048],
+            format: d32f
+    	},
+    	         
+        shadow_map:
+        {
+            size: [2048, 2048],
+            format: d32f,
+            type: array
+        },
+                
+        omni_shadow_map:
+        {
+            size: [512, 512],
+            format: d24s8,
+            type: cube_array
+        },
+		
+		colour_shadow_map:
+        {
+			size: [512, 512],
+            format: rgba8,
+            type: array
+        },
+		
+		colour_shadow_map_depth:
+        {
+			size: [512, 512],
+            format: d24s8,
+            type: array
+        },
+        
+        area_light_textures:
+        {
+            size: [640, 480],
+            format: rgba8,
+            type: array,
+            mips: true
+        },
+        
+        taa_history:
+        {
+        	format: rgba8,
+        	size: equal
+        },
+                
+        taa_colour:
+        {
+			format: rgba8,
+        	size: equal
+        },
+        
+        taa_depth:
+        {
+        	format: d24s8,
+        	size: equal
+        },
+        
+        velocity_buffer:
+        {
+        	format: r32f,
+        	size: equal
+        },
+    },
+    
+    views:
+    {
+		main_view_no_clear:
+        {
+            target             : [main_colour, main_depth],
+            colour_write_mask  : 0xf,
+            blend_state        : disabled,
+            viewport           : [0.0, 0.0, 1.0, 1.0],
+            raster_state       : default,
+            depth_stencil_state: default,
+            scene              : main_scene,
+            camera             : model_viewer_camera,
+            scene_views        : ["ecs_render_scene"],
+            render_flags       : ["forward_lit"],
+            
+            sampler_bindings:
+            [
+                { texture: shadow_map, unit: 15, state: shadow_compare, shader: ps },
+                { texture: area_light_textures, unit: 11, state: clamp_linear, shader: ps },
+                { texture: omni_shadow_map, unit: 10, state: clamp_linear, shader: ps },
+            ],
+        },
+        
+		main_view(main_view_no_clear):
+        {
+            target             : [main_colour, main_depth],
+            clear_colour       : [0.0, 0.0, 0.0, 1.0],
+            clear_depth        : 1.0
+        },
+        
+		main_view_basic(main_view):
+    	{
+    		raster_state : default,
+    		clear_colour : [0.0, 0.0, 0.0, 1.0],
+			pmfx_shader  : forward_render,
+            technique    : simple_lighting,
+	
+			sampler_bindings:
+            [
+                { texture: single_shadow_map, unit: 7, state: shadow_compare, shader: ps }
+            ]
+    	},
+        
+        main_view_alpha_blended:
+        {
+            target             : [main_colour, main_depth],
+            colour_write_mask  : 0xf,
+            blend_state        : alpha_blend,
+            viewport           : [0.0, 0.0, 1.0, 1.0],
+            raster_state       : default,
+            depth_stencil_state: default,
+            scene              : main_scene,
+            camera             : model_viewer_camera,
+            scene_views        : ["ecs_render_scene"],
+            render_flags       : ["forward_lit", "alpha_blended"],
+            
+            sampler_bindings:
+            [
+                { texture: shadow_map, unit: 15, state: shadow_compare, shader: ps },
+                { texture: area_light_textures, unit: 11, state: clamp_linear_lod, shader: ps },
+                { texture: omni_shadow_map, unit: 10, state: clamp_linear, shader: ps },
+            ],
+        },
+        
+        multiple_shadow_views:
+        {
+            target             : [shadow_map],
+            clear_depth        : 1.0,
+            colour_write_mask  : 0xf,
+            blend_state        : disabled,
+            viewport           : [0.0, 0.0, 1.0, 1.0],
+            raster_state       : front_face_cull,
+            depth_stencil_state: default,
+            pmfx_shader        : forward_render,
+            technique          : zonly,
+            scene              : main_scene,
+            scene_views        : ["ecs_render_shadow_maps"],
+            render_flags       : ["shadow_map"]
+        },
+        
+        single_shadow_view(multiple_shadow_views):
+        {
+        	target             : [single_shadow_map],
+        },
+        
+		multiple_colour_shadow_views:
+        {
+            target             : [colour_shadow_map, colour_shadow_map_depth],
+            clear_colour	   : [0.0, 1.0, 1.0, 1.0],
+            clear_depth        : 1.0,
+            colour_write_mask  : 0xf,
+            blend_state        : disabled,
+            viewport           : [0.0, 0.0, 1.0, 1.0],
+            raster_state       : back_face_cull,
+            depth_stencil_state: default,
+            scene              : main_scene,
+			pmfx_shader        : forward_render,
+            technique          : gi,
+            scene_views        : ["ecs_render_shadow_maps"],
+            render_flags       : ["forward_lit"]
+        },
+
+        multiple_omni_shadow_views:
+        {
+            target             : [omni_shadow_map],
+            clear_depth        : 1.0,
+            colour_write_mask  : 0xf,
+            blend_state        : disabled,
+            viewport           : [0.0, 0.0, 1.0, 1.0],
+            raster_state       : front_face_cull,
+            depth_stencil_state: default,
+            pmfx_shader        : forward_render,
+            technique          : omni_shadow,
+            scene              : main_scene,
+            scene_views        : ["ecs_render_omni_shadow_maps"],
+            render_flags       : ["shadow_map"]
+        },
+        
+        multiple_area_light_views:
+        {
+            target             : [area_light_textures],
+            clear_colour       : [0.0, 0.0, 0.0, 1.0],
+            clear_depth        : 1.0,
+            colour_write_mask  : 0xf,
+            blend_state        : disabled,
+            viewport           : [0.0, 0.0, 1.0, 1.0],
+            raster_state       : post_process,
+            depth_stencil_state: default,
+            pmfx_shader        : forward_render,
+            technique          : zonly,
+            scene              : main_scene,
+            scene_views        : ["ecs_render_area_light_textures"],
+            render_flags       : ["area_light_textures"],
+            generate_mip_maps  : true
+        },
+        
+        main_view_post_processed(main_view):
+        {
+            target: [post_process_colour, post_process_depth],
+            post_process : editor_default,
+            resolve: ["average_4x", "max_4x"]
+        },
+        
+        main_view_temporal_aa(main_view):
+        {
+        	target: [taa_colour, taa_depth],
+        	post_process : taa_resolve,
+        	jitter: true
+        },
+        
+        velocity_buffer:
+        {
+            target             : [velocity_buffer],
+            clear_colour       : [0.0, 0.0, 0.0, 0.0],
+            colour_write_mask  : 0xf,
+            blend_state        : disabled,
+            viewport           : [0.0, 0.0, 1.0, 1.0],
+            raster_state       : default,
+            depth_stencil_state: default,
+            scene              : main_scene,
+			pmfx_shader        : forward_render,
+            technique          : per_pixel_velocity,
+            camera             : model_viewer_camera,
+            scene_views        : ["ecs_render_scene"],
+            render_flags       : ["forward_lit"],
+        }
+    }
+}
+
