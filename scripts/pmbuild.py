@@ -537,7 +537,7 @@ def expand_args(args, task_name, input_file, output_file):
 # runs a generic tool
 def run_tool(config, task_name, tool, files):
     deps = util.value_with_default("dependencies", config[task_name], False)
-    exe = config["tools"][tool]
+    exe = util.sanitize_file_path(config["tools"][tool])
     for file in files:
         cmd = exe + " "
         cmd += expand_args(config[task_name]["args"], task_name, file[0], file[1])
