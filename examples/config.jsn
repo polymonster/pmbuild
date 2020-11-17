@@ -113,14 +113,20 @@
 			args: [
 				"-f %{input_file}"
 				"%{export_args}"
-				"-o %{output_file}.dds"
+				"-o %{output_file}"
 			]
 			
 			files: [
 				["assets/textures/**/*.*", "bin/textures"]
 			]
 			
-			strip_ext: true
+			excludes: [
+				"export.jsn",
+				"*.txt"
+			]
+			
+			change_ext: ".dds"
+			dependencies: true
 		}
 		
 		pmfx:
