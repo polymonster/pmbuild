@@ -94,9 +94,10 @@ def edit_credentials():
 def update_user_config(k, v, config):
     config[k] = v
     user = dict()
+    user["user_vars"] = dict()
     if os.path.exists("config.user.jsn"):
-        user = jsn.loads(open("config.user.jsn", "r").read())
-    user[k] = v
+        user["user_vars"] = jsn.loads(open("config.user.jsn", "r").read())["user_vars"]
+    user["user_vars"][k] = v
     bj = open("config.user.jsn", "w+")
     bj.write(json.dumps(user, indent=4))
     bj.close()
@@ -553,6 +554,7 @@ def main():
     # inject task keys, to allow alias jobs and multiple runs of the same thing
     for task_name in config.keys():
         task = config[task_name]
+        print(task_name)
         if "type" not in task.keys():
             config[task_name]["type"] = task_name
 
