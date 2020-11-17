@@ -388,7 +388,8 @@ def filter_files(config, task_name, files):
                     fp = os.path.join(directory, file)
                     if fp in lookups:
                         dest_ext = os.path.splitext(lookups[fp][1])[1]
-                        dest_file = os.path.join(os.path.dirname(lookups[fp][1]), bn + dest_ext)
+                        dest_dir = os.path.dirname(os.path.dirname(lookups[fp][1]))
+                        dest_file = os.path.join(dest_dir, bn + dest_ext)
                         lookups.pop(fp)
                     files += fp + "\n"
                 container_file = en.replace("export.jsn", bn + ".txt")
@@ -555,7 +556,8 @@ def run_tool(config, task_name, tool, files):
             d = dependencies.create_dependency_single(file[0], file[1], cmd)
             if dependencies.check_up_to_date_single(file[1], d):
                 continue
-        # util.log_lvl(cmd, config, "-verbose")
+        util.log_lvl(cmd, config, "-verbose")
+        print(cmd)
         p = subprocess.Popen(cmd, shell=True)
         e = p.wait()
         if e == 0 and deps:
