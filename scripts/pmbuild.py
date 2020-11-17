@@ -114,12 +114,9 @@ def locate_windows_sdk():
     sdk = "Windows Kits"
     sdk_dir = None
     for v in pf_env:
-        print(v)
         d = os.environ[v]
         if d:
             if sdk in os.listdir(d):
-                print(sdk)
-                print(d)
                 sdk_dir = os.path.join(d, sdk)
                 break
     if sdk_dir:
@@ -140,19 +137,19 @@ def locate_windows_sdk():
 
 # windows only, prompt user to supply their windows sdk version
 def configure_windows_sdk(config):
-    if "sdk_version" in config.keys():
+    if "windows_sdk_version" in config.keys():
         return
     # attempt to auto locate
     auto_sdk = locate_windows_sdk()
     if auto_sdk:
-        update_user_config("sdk_version", auto_sdk, config)
+        update_user_config("windows_sdk_version", auto_sdk, config)
         return
     print("Windows SDK version not set.")
     print("Please enter the windows sdk you want to use.")
     print("You can find available sdk versions in:")
     print("Visual Studio > Project Properties > General > Windows SDK Version.")
     input_sdk = str(input())
-    update_user_config("sdk_version", input_sdk, config)
+    update_user_config("windows_sdk_version", input_sdk, config)
     return
 
 
@@ -171,13 +168,14 @@ def locate_vs_root():
 
 
 # find latest visual studio version
-def locate_vs_latest():
+def locate_vs_latest(config):
     vs_dir = locate_vs_root()
     if len(vs_dir) == 0:
         print("[warning]: could not auto locate visual studio, using vs2017 as default")
         return "vs2017"
     supported = ["2017", "2019"]
     versions = sorted(os.listdir(vs_dir), reverse=False)
+    update_user_config("vs_latest", "vs" + str(versions[0]), config)
     for v in versions:
         if v in supported:
             return "vs" + v
@@ -226,7 +224,7 @@ def configure_vc_vars_all(config):
 
 # calls vcvars all to setup the current environment to be able to use msbuild
 def setup_vcvars(config):
-    return "pushd \ && cd \"" + config["vcvarsall_dir"] + "\" && vcvarsall.bat x86_amd64 && popd"
+    return "pushd \ && cd \"" + config["user_vars"]["vcvarsall_dir"] + "\" && vcvarsall.bat x86_amd64 && popd"
 
 
 # apple only, ask user for their team id to insert into xcode projects
@@ -250,8 +248,9 @@ def configure_user(config, args):
         config_user = jsn.loads(open("config.user.jsn", "r").read())
     if util.get_platform_name() == "windows":
         if "-msbuild" not in sys.argv:
-            configure_vc_vars_all(config_user)
-            configure_windows_sdk(config_user)
+            locate_vs_latest(config_user["user_vars"])
+            configure_vc_vars_all(config_user["user_vars"])
+            configure_windows_sdk(config_user["user_vars"])
     if os.path.exists("config.user.jsn"):
         config_user = jsn.loads(open("config.user.jsn", "r").read())
         util.merge_dicts(config, config_user)
@@ -414,7 +413,6 @@ def get_task_files(config, task_name):
         if type(files_task) == dict:
             pairs.extend(get_task_files_regex(files_task))
         else:
-            print(files_task)
             if len(files_task) != 2:
                 print("ERROR: file tasks must be an array of size 2 [src, dst]")
                 exit(1)
@@ -506,18 +504,19 @@ def apply_export_config_rules(export_config, task_name, filename):
 
 # get file specific export config from the nested directory structure, apply rules to specific files
 def export_config_for_file(task_name, filename):
-    print(filename)
     dir_config = export_config_for_directory(task_name, os.path.dirname(filename))
     file_config = apply_export_config_rules(dir_config, task_name, filename)
     return file_config
 
 
 # expand args evaluating %{input_file}, %{output_file} and %{export_args}
-def expand_args(args, task_name, input_file, output_file):
+def expand_args(args, config, task_name, input_file, output_file):
     cmd = ""
     for arg in args:
+        # hook in input and output files
         arg = arg.replace("%{input_file}", input_file)
         arg = arg.replace("%{output_file}", output_file)
+        # expand args from export.jsn
         if arg.find("%{export_args}") != -1:
             export_config = export_config_for_file(task_name, input_file)
             arg = ""
@@ -530,6 +529,15 @@ def expand_args(args, task_name, input_file, output_file):
                         val = ""
                 arg += export_arg + val + " "
             arg = arg.strip()
+        # replace user_vars
+        user_vars = [
+            "vs_latest",
+            "windows_sdk_version"
+        ]
+        for uv in user_vars:
+            v = "%{" + uv + "}"
+            if arg.find(v) != -1:
+                arg = arg.replace(v, config["user_vars"][uv])
         cmd += arg + " "
     return cmd
 
@@ -540,14 +548,14 @@ def run_tool(config, task_name, tool, files):
     exe = util.sanitize_file_path(config["tools"][tool])
     for file in files:
         cmd = exe + " "
-        cmd += expand_args(config[task_name]["args"], task_name, file[0], file[1])
+        cmd += expand_args(config[task_name]["args"], config, task_name, file[0], file[1])
         if len(file[1]) > 0:
             util.create_dir(file[1])
         if deps:
             d = dependencies.create_dependency_single(file[0], file[1], cmd)
             if dependencies.check_up_to_date_single(file[1], d):
                 continue
-        util.log_lvl(cmd, config, "-verbose")
+        # util.log_lvl(cmd, config, "-verbose")
         p = subprocess.Popen(cmd, shell=True)
         e = p.wait()
         if e == 0 and deps:
@@ -569,16 +577,11 @@ def make_for_toolchain(jsn_config, file, options):
     make_config = jsn_config["make"]
     toolchain = make_config["toolchain"]
 
-    # msbuild needs vcvars all
-    setup_env = ""
-    if toolchain == "msbuild":
-        setup_env = setup_vcvars(jsn_config) + " &&"
-
     cmds = {
         "make": "make",
         "emmake": "emmake make",
         "xcodebuild": "xcodebuild",
-        "msbuild": "msbuild"
+        "msbuild": '"C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\msbuild.exe"'
     }
     cmd = cmds[toolchain]
 
@@ -610,11 +613,8 @@ def make_for_toolchain(jsn_config, file, options):
             extra_args += option
 
     # build final cli command
-    make_commands = []
-    cmdline = setup_env + " " + cmd + " " + target_option + " " + file + " " + config + " " + extra_args
-    make_commands.append(cmdline)
-
-    return make_commands
+    cmdline = cmd + " " + target_option + " " + file + " " + config + " " + extra_args
+    return cmdline
 
 
 # runs make, and compiles from makefiles, vs solution or xcode project.
@@ -626,11 +626,13 @@ def make(config, files, options):
     if len(options) == 0:
         print("[error] no make target specified")
         return
+    if config["make"]["toolchain"] == "msbuild":
+        setup_env = setup_vcvars(config)
+        subprocess.call(setup_env, shell=True)
     for file in files:
         if options[0] == "all":
             pass
         elif options[0] != os.path.splitext(os.path.basename(file[0]))[0]:
-            print(os.path.basename(file[0]))
             continue
         os.chdir(os.path.dirname(file[0]))
         proj = os.path.basename(file[0])
@@ -690,7 +692,6 @@ def launch(config, files, options):
         else:
             for o in options[1:]:
                 cmd += " " + o
-            print(cmd)
             subprocess.call(cmd, shell=True)
         os.chdir(cwd)
 
@@ -757,7 +758,6 @@ def main():
     # inject task keys, to allow alias jobs and multiple runs of the same thing
     for task_name in config.keys():
         task = config[task_name]
-        print(task_name)
         if "type" not in task.keys():
             config[task_name]["type"] = task_name
 
