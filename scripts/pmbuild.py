@@ -10,14 +10,19 @@ import glob
 import re
 import shutil
 import cryptography
+import threading
+import webbrowser
+import fnmatch
+
 import util
+import dependencies
 import jsn.jsn as jsn
 import cgu.cgu as cgu
-import dependencies
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from http.server import HTTPServer, CGIHTTPRequestHandler
 
 
 # prompts user for password to access encrypted credentials files
@@ -219,6 +224,11 @@ def configure_vc_vars_all(config):
             time.sleep(1)
 
 
+# calls vcvars all to setup the current environment to be able to use msbuild
+def setup_vcvars(config):
+    return "pushd \ && cd \"" + config["vcvarsall_dir"] + "\" && vcvarsall.bat x86_amd64 && popd"
+
+
 # apple only, ask user for their team id to insert into xcode projects
 def configure_teamid(config):
     if "teamid" in config.keys():
@@ -285,6 +295,12 @@ def copy(config, task_name, files):
         util.copy_file_create_dir_if_newer(file[0], file[1])
 
 
+# moves files from src to destination only if newer
+def move(config, task_name, files):
+    for file in files:
+        shutil.move(file[0], file[1])
+
+
 # deletes files and directories specified in files
 def clean(config, task_name):
     clean_task = config[task_name]
@@ -341,6 +357,55 @@ def get_task_files_raw(files_task):
     return pairs
 
 
+# removes files belonging to excludes, expand containers removing loose files from the list, and inserts the container
+def filter_files(config, task_name, files):
+    dirs = []
+    lookups = dict()
+    for file in files:
+        dn = os.path.dirname(file[0])
+        if dn not in dirs:
+            dirs.append(dn)
+        excluded = False
+        if "excludes" in config[task_name].keys():
+            for exclude in config[task_name]["excludes"]:
+                if exclude.find("*") != -1:
+                    if fnmatch.fnmatch(file[0], exclude):
+                        excluded = True
+                        break
+                elif os.path.basename(file[0]) == exclude:
+                    excluded = True
+                    break
+        if not excluded:
+            lookups[file[0]] = (file[0], file[1])
+    for directory in dirs:
+        en = os.path.join(directory, "export.jsn")
+        if os.path.exists(en):
+            j = jsn.loads(open(en, "r").read())
+            if "container" in j:
+                bn = os.path.basename(directory)
+                files = ""
+                dest_file = ""
+                for file in j["container"]["files"]:
+                    fp = os.path.join(directory, file)
+                    if fp in lookups:
+                        dest_ext = os.path.splitext(lookups[fp][1])[1]
+                        dest_file = os.path.join(os.path.dirname(lookups[fp][1]), bn + dest_ext)
+                        lookups.pop(fp)
+                    files += fp + "\n"
+                container_file = en.replace("export.jsn", bn + ".txt")
+                current_files = ""
+                if os.path.exists(container_file):
+                    current_files = open(container_file, "r").read()
+                if current_files != files:
+                    open(container_file, "w+").write(files)
+                if container_file not in lookups:
+                    lookups[container_file] = (container_file, dest_file)
+    pairs = []
+    for f in lookups.keys():
+        pairs.append((lookups[f][0], lookups[f][1]))
+    return pairs
+
+
 # takes a tasks files objects and extracts a tuple(input, output) list from directory, single files, glob or regex
 def get_task_files(config, task_name):
     files_array = config[task_name]["files"]
@@ -349,6 +414,7 @@ def get_task_files(config, task_name):
         if type(files_task) == dict:
             pairs.extend(get_task_files_regex(files_task))
         else:
+            print(files_task)
             if len(files_task) != 2:
                 print("ERROR: file tasks must be an array of size 2 [src, dst]")
                 exit(1)
@@ -356,24 +422,26 @@ def get_task_files(config, task_name):
                 pairs.extend(get_task_files_glob(files_task))
             else:
                 pairs.extend(get_task_files_raw(files_task))
-    change_ext = ""
     if util.value_with_default("change_ext", config[task_name], False):
         change_ext = config[task_name]["change_ext"]
-    if util.value_with_default("strip_ext", config[task_name], False) or len(change_ext) > 0:
         stripped = []
         for output in pairs:
             changed = util.change_ext(output[1], change_ext)
             stripped.append((output[0], changed))
         pairs = stripped
+    pairs = filter_files(config, task_name, pairs)
     return pairs
 
 
 # returns expanded list of file from matches where each list element of files can be a glob, regex match or single file
 def expand_rules_files(export_config, task_name, subdir):
+    if task_name not in export_config:
+        return
     if "rules" not in export_config[task_name]:
         return
     rules = export_config[task_name]["rules"]
-    presets = export_config[task_name]["presets"]
+    if "presets" in export_config[task_name]:
+        presets = export_config[task_name]["presets"]
     for rule in rules.keys():
         rule_config = rules[rule]
         expanded_files = []
@@ -397,7 +465,8 @@ def expand_rules_files(export_config, task_name, subdir):
                 for key in presets[rule_config["preset"]].keys():
                     rule_config[key] = presets[rule_config["preset"]][key]
             rule_config.pop("preset")
-    export_config[task_name].pop("presets")
+    if "presets" in export_config[task_name]:
+        export_config[task_name].pop("presets")
 
 
 # look for export.json in directory tree, combine and override exports by depth, override further by rules
@@ -437,8 +506,8 @@ def apply_export_config_rules(export_config, task_name, filename):
 
 # get file specific export config from the nested directory structure, apply rules to specific files
 def export_config_for_file(task_name, filename):
+    print(filename)
     dir_config = export_config_for_directory(task_name, os.path.dirname(filename))
-    print(json.dumps(dir_config, indent=4))
     file_config = apply_export_config_rules(dir_config, task_name, filename)
     return file_config
 
@@ -485,7 +554,6 @@ def run_tool(config, task_name, tool, files):
             dependencies.write_to_file_single(d, file[1])
 
 
-
 # runs shell commands in the current environment
 def shell(config, task_name):
     commands = config[task_name]["commands"]
@@ -494,6 +562,137 @@ def shell(config, task_name):
     for cmd in commands:
         p = subprocess.Popen(cmd, shell=True)
         p.wait()
+
+
+# generate a cli command for building with different toolchains (make, gcc/clang, xcodebuild, msbuild)
+def make_for_toolchain(jsn_config, file, options):
+    make_config = jsn_config["make"]
+    toolchain = make_config["toolchain"]
+
+    # msbuild needs vcvars all
+    setup_env = ""
+    if toolchain == "msbuild":
+        setup_env = setup_vcvars(jsn_config) + " &&"
+
+    cmds = {
+        "make": "make",
+        "emmake": "emmake make",
+        "xcodebuild": "xcodebuild",
+        "msbuild": "msbuild"
+    }
+    cmd = cmds[toolchain]
+
+    target_options = {
+        "make": "",
+        "emmake": "",
+        "xcodebuild": "-project ",
+        "msbuild": ""
+    }
+    target_option = target_options[toolchain]
+
+    configs = {
+        "make": "config=",
+        "emmake": "config=",
+        "xcodebuild": "-configuration ",
+        "msbuild": "/p:Configuration="
+    }
+    config = ""
+
+    # parse other options
+    extra_args = ""
+    for option in options[1:]:
+        # config
+        if option.find("config=") != -1:
+            config = configs[toolchain]
+            config += option.replace("config=", "")
+        else:
+            # pass through any additional platform specific args
+            extra_args += option
+
+    # build final cli command
+    make_commands = []
+    cmdline = setup_env + " " + cmd + " " + target_option + " " + file + " " + config + " " + extra_args
+    make_commands.append(cmdline)
+
+    return make_commands
+
+
+# runs make, and compiles from makefiles, vs solution or xcode project.
+def make(config, files, options):
+    cwd = os.getcwd()
+    if "make" not in config.keys():
+        print("[error] make config missing from config.jsn ")
+        return
+    if len(options) == 0:
+        print("[error] no make target specified")
+        return
+    for file in files:
+        if options[0] == "all":
+            pass
+        elif options[0] != os.path.splitext(os.path.basename(file[0]))[0]:
+            print(os.path.basename(file[0]))
+            continue
+        os.chdir(os.path.dirname(file[0]))
+        proj = os.path.basename(file[0])
+        cmd = make_for_toolchain(config, proj, options)
+        subprocess.call(cmd, shell=True)
+        os.chdir(cwd)
+
+
+# start a simple webserver serving path on port
+def start_server(path, port=8000):
+    httpd = HTTPServer(('', port), CGIHTTPRequestHandler)
+    httpd.serve_forever()
+
+
+# starts a web server on a thread and loads a sample in the browser
+def run_web(cmd):
+    port = 8000
+    daemon = threading.Thread(name='daemon_server', target=start_server, args=('.', port))
+    daemon.setDaemon(True)
+    daemon.start()
+    chrome_path = {
+        "mac": 'open -a /Applications/Google\ Chrome.app %s',
+        "windows": "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe %s",
+        "linux": ""
+    }
+    plat = util.get_platform_name()
+    webbrowser.get(chrome_path[plat]).open('http://localhost:{}/{}'.format(port, cmd))
+    while True:
+        time.sleep(1)
+
+
+# launches and exectuable program from the commandline
+def launch(config, files, options):
+    cwd = os.getcwd()
+    if "launch" not in config.keys():
+        print("[error] run config missing from config.jsn ")
+        return
+    run_config = config["launch"]
+    if len(options) == 0:
+        print("[error] no run target specified")
+        return
+    targets = []
+    for file in files:
+        file = file[0]
+        bn = os.path.basename(file)
+        tn = os.path.splitext(bn)[0]
+        if options[0] == "all" or options[0] == tn:
+            targets.append((os.path.dirname(file), os.path.basename(file), tn))
+    # switch to bin dir
+    for t in targets:
+        os.chdir(t[0])
+        cmd = run_config["cmd"]
+        cmd = cmd.replace("%{target_path}", t[1])
+        cmd = cmd.replace("%{target_name}", t[2])
+        if os.path.splitext(t[1])[0] == ".html":
+            run_web(cmd)
+        else:
+            for o in options[1:]:
+                cmd += " " + o
+            print(cmd)
+            subprocess.call(cmd, shell=True)
+        os.chdir(cwd)
 
 
 # main function
@@ -506,7 +705,7 @@ def main():
         exit(1)
 
     # load jsn, inherit etc
-    config_all = jsn.loads(open("config.jsn", "r").read())
+    config_all = jsn.loads(open("config2.jsn", "r").read())
 
     # special args passed from user
     special_args = [
@@ -539,13 +738,17 @@ def main():
     call = "run"
     if "-help" in special_args:
         call = "help"
+
+    profile_pos = 1
+    if sys.argv[1] == "make" or sys.argv[1] == "launch":
+        profile_pos = 2
         
     # first arg is build profile, load profile and merge the config for platform
     if call == "run":
-        if sys.argv[1] not in config_all:
-            print("[error] " + sys.argv[1] + " is not a valid pmbuild profile")
+        if sys.argv[profile_pos] not in config_all:
+            print("[error] " + sys.argv[profile_pos] + " is not a valid pmbuild profile")
             exit(0)
-        config = config_all[sys.argv[1]]
+        config = config_all[sys.argv[profile_pos]]
         # load config user for user specific values (sdk version, vcvarsall.bat etc.)
         configure_user(config, sys.argv)
     else:
@@ -570,61 +773,73 @@ def main():
     # core scripts
     scripts = {
         "copy": copy,
+        "move": move,
         "connect": connect,
-        "make": None,
-        "lunch": None,
+        "make": make,
+        "launch": launch,
         "shell": shell
     }
 
-    # add extensions
-    for ext_name in config_all["extensions"].keys():
-        ext = config_all["extensions"][ext_name]
-        ext_module = importlib.import_module(ext["module"])
-        scripts[ext_name] = getattr(ext_module, ext["function"])
+    if sys.argv[1] == "make":
+        mf = get_task_files(config, "make")
+        make(config, mf, sys.argv[3:])
+    elif sys.argv[1] == "launch":
+        mf = get_task_files(config, "launch")
+        launch(config, mf, sys.argv[3:])
+    else:
+        # add extensions
+        if "extensions" in config_all.keys():
+            for ext_name in config_all["extensions"].keys():
+                ext = config_all["extensions"][ext_name]
+                if "search_path" in ext.keys():
+                    sys.path.append(ext["search_path"])
+                ext_module = importlib.import_module(ext["module"])
+                scripts[ext_name] = getattr(ext_module, ext["function"])
 
-    # cleans are special operations which runs first
-    if "-clean" in special_args:
+        # cleans are special operations which runs first
+        if "-clean" in special_args:
+            for task_name in config.keys():
+                task = config[task_name]
+                if "type" not in task:
+                    continue
+                if task["type"] == "clean":
+                    util.print_header(task_name)
+                    clean(config, task_name)
+
+        # filter tasks
+        runnable = []
         for task_name in config.keys():
+            task = config[task_name]
+            non_tasks = ["clean", "make", "launch"]
+            if "type" not in task:
+                continue
+            if task["type"] in non_tasks:
+                continue
+            if "-n" + task_name in sys.argv:
+                continue
+            if "-" + task_name in sys.argv or "-all" in special_args:
+                runnable.append(task_name)
+
+        # run tasks
+        for task_name in runnable:
             task = config[task_name]
             if "type" not in task:
                 continue
-            if task["type"] == "clean":
-                util.print_header(task_name)
-                clean(config, task_name)
-
-    # filter tasks
-    runnable = []
-    for task_name in config.keys():
-        task = config[task_name]
-        if "type" not in task:
-            continue
-        if "type" == "clean":
-            continue
-        if "-n" + task_name in sys.argv:
-            continue
-        if "-" + task_name in sys.argv or "-all" in special_args:
-            runnable.append(task_name)
-
-    # run tasks
-    for task_name in runnable:
-        task = config[task_name]
-        if "type" not in task:
-            continue
-        if "type" == "clean":
-            continue
-        util.print_header(task_name)
-        task_type = task["type"]
-        if task_type in config["tools"].keys():
-            if "files" in task.keys():
-                run_tool(config, task_name, task_type, get_task_files(config, task_name))
-            else:
-                run_tool(config, task_name, task_type, [("", "")])
-        elif task_type in scripts.keys():
-            if "files" in task.keys():
-                scripts.get(task_type)(config, task_name, get_task_files(config, task_name))
-            else:
-                scripts.get(task_type)(config, task_name)
-            pass
+            if "type" == "clean":
+                continue
+            util.print_header(task_name)
+            task_type = task["type"]
+            if task_type in config["tools"].keys():
+                if "files" in task.keys():
+                    run_tool(config, task_name, task_type, get_task_files(config, task_name))
+                else:
+                    run_tool(config, task_name, task_type, [("", "")])
+            elif task_type in scripts.keys():
+                if "files" in task.keys():
+                    scripts.get(task_type)(config, task_name, get_task_files(config, task_name))
+                else:
+                    scripts.get(task_type)(config, task_name)
+                pass
 
     util.print_duration(start_time)
 
