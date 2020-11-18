@@ -244,6 +244,7 @@ def configure_teamid(config):
 # configure user settings for each platform
 def configure_user(config, args):
     config_user = dict()
+    config_user["user_vars"] = dict()
     if os.path.exists("config.user.jsn"):
         config_user = jsn.loads(open("config.user.jsn", "r").read())
     if util.get_platform_name() == "windows":
@@ -382,9 +383,18 @@ def filter_files(config, task_name, files):
             j = jsn.loads(open(en, "r").read())
             if "container" in j:
                 bn = os.path.basename(directory)
+                dir_files = sorted(os.listdir(directory))
+                filtered_files = []
+                for file in dir_files:
+                    if file in j["container"]["files"]:
+                        filtered_files.append(file)
+                        continue
+                    for pattern in j["container"]["files"]:
+                        if fnmatch.fnmatch(file, pattern):
+                            filtered_files.append(file)
                 files = ""
                 dest_file = ""
-                for file in j["container"]["files"]:
+                for file in filtered_files:
                     fp = os.path.join(directory, file)
                     if fp in lookups:
                         dest_ext = os.path.splitext(lookups[fp][1])[1]
@@ -557,7 +567,6 @@ def run_tool(config, task_name, tool, files):
             if dependencies.check_up_to_date_single(file[1], d):
                 continue
         util.log_lvl(cmd, config, "-verbose")
-        print(cmd)
         p = subprocess.Popen(cmd, shell=True)
         e = p.wait()
         if e == 0 and deps:
