@@ -263,11 +263,13 @@ def connect(config, task_name):
     mount_path = util.get_platform_network_path(cfg["address"], cfg["mount"])
     if not os.path.exists(mount_path):
         user_pass = ""
-        if "credentials" in cfg:
-            j = lookup_credentials(cfg["credentials"])
-            user_pass = cfg["credentials"] + ":" + str(j) + "@"
         if "user" and "password" in cfg:
             user_pass = cfg["user"] + ":" + cfg["password"] + "@"
+        elif "credentials" in cfg:
+            j = lookup_credentials(cfg["credentials"])
+            user_pass = cfg["credentials"] + ":" + str(j) + "@"
+            cfg["user"] = cfg["credentials"]
+            cfg["password"] = str(j)
         if os.name == "posix":
             cmd = "open " + cgu.in_quotes("smb://" + user_pass + cfg["address"] + "/" + cfg["mount"])
             p = subprocess.Popen(cmd, shell=True)
