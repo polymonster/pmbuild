@@ -4,9 +4,6 @@
 [submodule "scripts/cgu"]
 	path = scripts/cgu
 	url = https://github.com/polymonster/cgu.git
-[submodule "bin/pmfx-shader"]
-	path = bin/pmfx-shader
-	url = https://github.com/polymonster/pmfx-shader.git
 [submodule "scripts/pmfx-shader"]
 	path = scripts/pmfx-shader
 	url = https://github.com/polymonster/pmfx-shader
