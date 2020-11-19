@@ -619,13 +619,8 @@ def make_for_toolchain(jsn_config, file, options):
     # parse other options
     extra_args = ""
     for option in options[1:]:
-        # config
-        if option.find("config=") != -1:
-            config = configs[toolchain]
-            config += option.replace("config=", "")
-        else:
-            # pass through any additional platform specific args
-            extra_args += option
+        # pass through any additional platform specific args
+        extra_args += option + " "
 
     # build final cli command
     cmdline = cmd + " " + target_option + " " + file + " " + config + " " + extra_args
@@ -711,6 +706,21 @@ def launch(config, files, options):
         os.chdir(cwd)
 
 
+# top level help
+def pmbuild_help(config):
+    util.print_header("pmbuild version 4.0-help ")
+    print("\nusage: pmbuild <profile> <tasks...>")
+    print("\noptions:")
+    print("    -help (display this dialog).")
+    print("    -<task> -help (display task help).")
+    print("    -cfg (print jsn config for current profile).")
+    print("    -verbose (print more).")
+    print("\nprofiles:")
+    print("    config.jsn (edit task settings in here)")
+    for p in config.keys():
+        print(" " * 8 + p)
+
+
 # main function
 def main():
     start_time = time.time()
@@ -757,7 +767,8 @@ def main():
     # switch between help and run mode
     call = "run"
     if "-help" in special_args:
-        call = "help"
+        pmbuild_help(config_all)
+        exit(0)
 
     profile_pos = 1
     if sys.argv[1] == "make" or sys.argv[1] == "launch":
