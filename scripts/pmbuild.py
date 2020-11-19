@@ -831,7 +831,9 @@ def main():
         runnable = []
         for task_name in config.keys():
             task = config[task_name]
-            non_tasks = ["clean", "make", "launch"]
+            if type(task) != dict:
+                continue
+            non_tasks = ["clean", "make", "launch", "user_vars"]
             if "type" not in task:
                 continue
             if task["type"] in non_tasks:
