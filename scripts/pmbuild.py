@@ -266,6 +266,8 @@ def connect(config, task_name):
         if "credentials" in cfg:
             j = lookup_credentials(cfg["credentials"])
             user_pass = cfg["credentials"] + ":" + str(j) + "@"
+        if "user" and "password" in cfg:
+            user_pass = cfg["user"] + ":" + cfg["password"] + "@"
         if os.name == "posix":
             cmd = "open " + cgu.in_quotes("smb://" + user_pass + cfg["address"] + "/" + cfg["mount"])
             p = subprocess.Popen(cmd, shell=True)
@@ -711,13 +713,17 @@ def launch(config, files, options):
 def main():
     start_time = time.time()
 
+    config_file = "config.jsn"
+    if os.path.exists("config2.jsn"):
+        config_file = "config2.jsn"
+
     # must have config.json in working directory
-    if not os.path.exists("config.jsn"):
+    if not os.path.exists(config_file):
         print("[error] no config.json in current directory.")
         exit(1)
 
     # load jsn, inherit etc
-    config_all = jsn.loads(open("config2.jsn", "r").read())
+    config_all = jsn.loads(open(config_file, "r").read())
 
     # special args passed from user
     special_args = [
@@ -775,11 +781,13 @@ def main():
     config["special_args"] = special_args
 
     # obtain tools for this platform
-    config["tools"] = config_all["tools"]
-    if "-cfg" in special_args:
-        print(sys.argv)
-        print(special_args)
-        print(json.dumps(config, indent=4))
+    config["tools"] = dict()
+    if "tools" in config_all.keys():
+        config["tools"] = config_all["tools"]
+        if "-cfg" in special_args:
+            print(sys.argv)
+            print(special_args)
+            print(json.dumps(config, indent=4))
 
     # core scripts
     scripts = {
