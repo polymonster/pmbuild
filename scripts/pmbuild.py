@@ -1,4 +1,4 @@
-eimport time
+import time
 import json
 import sys
 import subprocess
