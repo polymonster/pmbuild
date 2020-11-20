@@ -1,4 +1,4 @@
-import time
+eimport time
 import json
 import sys
 import subprocess
@@ -647,7 +647,10 @@ def make(config, files, options):
         os.chdir(os.path.dirname(file[0]))
         proj = os.path.basename(file[0])
         cmd = make_for_toolchain(config, proj, options)
-        subprocess.call(cmd, shell=True)
+        p = subprocess.Popen(cmd, shell=True)
+        e = p.wait()
+        if e != 0:
+            exit(1)
         os.chdir(cwd)
 
 
@@ -702,7 +705,10 @@ def launch(config, files, options):
         else:
             for o in options[1:]:
                 cmd += " " + o
-            subprocess.call(cmd, shell=True)
+            p = subprocess.call(cmd, shell=True)
+            e = p.wait()
+            if e != 0:
+                exit(1)
         os.chdir(cwd)
 
 
