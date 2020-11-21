@@ -244,6 +244,7 @@ def configure_teamid(config):
 # configure user settings for each platform
 def configure_user(config, args):
     config_user = dict()
+    config_user["user_vars"] = dict()
     if os.path.exists("config.user.jsn"):
         config_user = jsn.loads(open("config.user.jsn", "r").read())
     if util.get_platform_name() == "windows":
@@ -262,9 +263,13 @@ def connect(config, task_name):
     mount_path = util.get_platform_network_path(cfg["address"], cfg["mount"])
     if not os.path.exists(mount_path):
         user_pass = ""
-        if "credentials" in cfg:
+        if "user" and "password" in cfg:
+            user_pass = cfg["user"] + ":" + cfg["password"] + "@"
+        elif "credentials" in cfg:
             j = lookup_credentials(cfg["credentials"])
             user_pass = cfg["credentials"] + ":" + str(j) + "@"
+            cfg["user"] = cfg["credentials"]
+            cfg["password"] = str(j)
         if os.name == "posix":
             cmd = "open " + cgu.in_quotes("smb://" + user_pass + cfg["address"] + "/" + cfg["mount"])
             p = subprocess.Popen(cmd, shell=True)
@@ -382,9 +387,18 @@ def filter_files(config, task_name, files):
             j = jsn.loads(open(en, "r").read())
             if "container" in j:
                 bn = os.path.basename(directory)
+                dir_files = sorted(os.listdir(directory))
+                filtered_files = []
+                for file in dir_files:
+                    if file in j["container"]["files"]:
+                        filtered_files.append(file)
+                        continue
+                    for pattern in j["container"]["files"]:
+                        if fnmatch.fnmatch(file, pattern):
+                            filtered_files.append(file)
                 files = ""
                 dest_file = ""
-                for file in j["container"]["files"]:
+                for file in filtered_files:
                     fp = os.path.join(directory, file)
                     if fp in lookups:
                         dest_ext = os.path.splitext(lookups[fp][1])[1]
@@ -557,7 +571,6 @@ def run_tool(config, task_name, tool, files):
             if dependencies.check_up_to_date_single(file[1], d):
                 continue
         util.log_lvl(cmd, config, "-verbose")
-        print(cmd)
         p = subprocess.Popen(cmd, shell=True)
         e = p.wait()
         if e == 0 and deps:
@@ -606,13 +619,8 @@ def make_for_toolchain(jsn_config, file, options):
     # parse other options
     extra_args = ""
     for option in options[1:]:
-        # config
-        if option.find("config=") != -1:
-            config = configs[toolchain]
-            config += option.replace("config=", "")
-        else:
-            # pass through any additional platform specific args
-            extra_args += option
+        # pass through any additional platform specific args
+        extra_args += option + " "
 
     # build final cli command
     cmdline = cmd + " " + target_option + " " + file + " " + config + " " + extra_args
@@ -639,7 +647,10 @@ def make(config, files, options):
         os.chdir(os.path.dirname(file[0]))
         proj = os.path.basename(file[0])
         cmd = make_for_toolchain(config, proj, options)
-        subprocess.call(cmd, shell=True)
+        p = subprocess.Popen(cmd, shell=True)
+        e = p.wait()
+        if e != 0:
+            exit(1)
         os.chdir(cwd)
 
 
@@ -694,21 +705,43 @@ def launch(config, files, options):
         else:
             for o in options[1:]:
                 cmd += " " + o
-            subprocess.call(cmd, shell=True)
+            p = subprocess.call(cmd, shell=True)
+            e = p.wait()
+            if e != 0:
+                exit(1)
         os.chdir(cwd)
+
+
+# top level help
+def pmbuild_help(config):
+    util.print_header("pmbuild version 4.0-help ")
+    print("\nusage: pmbuild <profile> <tasks...>")
+    print("\noptions:")
+    print("    -help (display this dialog).")
+    print("    -<task> -help (display task help).")
+    print("    -cfg (print jsn config for current profile).")
+    print("    -verbose (print more).")
+    print("\nprofiles:")
+    print("    config.jsn (edit task settings in here)")
+    for p in config.keys():
+        print(" " * 8 + p)
 
 
 # main function
 def main():
     start_time = time.time()
 
+    config_file = "config.jsn"
+    if os.path.exists("config2.jsn"):
+        config_file = "config2.jsn"
+
     # must have config.json in working directory
-    if not os.path.exists("config.jsn"):
+    if not os.path.exists(config_file):
         print("[error] no config.json in current directory.")
         exit(1)
 
     # load jsn, inherit etc
-    config_all = jsn.loads(open("config2.jsn", "r").read())
+    config_all = jsn.loads(open(config_file, "r").read())
 
     # special args passed from user
     special_args = [
@@ -740,7 +773,8 @@ def main():
     # switch between help and run mode
     call = "run"
     if "-help" in special_args:
-        call = "help"
+        pmbuild_help(config_all)
+        exit(0)
 
     profile_pos = 1
     if sys.argv[1] == "make" or sys.argv[1] == "launch":
@@ -766,11 +800,13 @@ def main():
     config["special_args"] = special_args
 
     # obtain tools for this platform
-    config["tools"] = config_all["tools"]
-    if "-cfg" in special_args:
-        print(sys.argv)
-        print(special_args)
-        print(json.dumps(config, indent=4))
+    config["tools"] = dict()
+    if "tools" in config_all.keys():
+        config["tools"] = config_all["tools"]
+        if "-cfg" in special_args:
+            print(sys.argv)
+            print(special_args)
+            print(json.dumps(config, indent=4))
 
     # core scripts
     scripts = {
@@ -812,7 +848,9 @@ def main():
         runnable = []
         for task_name in config.keys():
             task = config[task_name]
-            non_tasks = ["clean", "make", "launch"]
+            if type(task) != dict:
+                continue
+            non_tasks = ["clean", "make", "launch", "user_vars"]
             if "type" not in task:
                 continue
             if task["type"] in non_tasks:
