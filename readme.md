@@ -91,7 +91,6 @@ jsn allows inheritence and variables `${variable}` evaluated with dollar sign wh
             data_dir: ""
         }
     }
-
     // mac inherits from base and overrides ${data_dir}
     mac(base): {
         jsn_vars: {
@@ -241,7 +240,7 @@ extensions: {
 
 Each task has a type, you can define this using the `type` member, if the name of the task is the same as a tool, extension or built in function then the `type` member is implicitly added.
 
-```
+```yaml
 copy:
 {
     files: [
@@ -288,7 +287,7 @@ pmbuild launch <profile> <target>
 
 You can launch built executables from the commandline for running tests, again a files object is used to find the exectuables:
 
-```
+```yaml
 launch: {
     cmd: "%{target_path}"
         files: [
@@ -299,9 +298,9 @@ launch: {
 
 # network connections / credentials
 
-In a development environment we may be dealing with large amounts of data which is stored on a server, we can mount connections to local area network connections via smb. You can supply credentials for the network connects in plain text, or encrypt them with crytographic quality encryption to be stored and accessed with a password:
+In a development environment we may need to synchronise large amounts of data which is stored on a server, or we may need to build artifacts to a server or deploy to a dev kit. we can mount connections to local area network connections via smb. You can supply credentials for the network connects in plain text, or encrypt them with crytographic quality encryption to be stored and accessed with a password:
 
-```
+```yaml
 // plain text
 connect-server:
 {
@@ -335,7 +334,3 @@ A file `credentials.unlocked.jsn` will be generated in the current working direc
     username: "password"
 }
 ```
-
-
-
-
