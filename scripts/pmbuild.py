@@ -229,8 +229,9 @@ def setup_vcvars(config):
 
 # apple only, ask user for their team id to insert into xcode projects
 def configure_teamid(config):
-    if "teamid" in config.keys():
-        return
+    if "user_vars" in config.keys():
+        if "teamid" in config["user_vars"].keys():
+            return
     print("Apple Developer Team ID not set.")
     print("Please enter your development team ID ie. (5B1Y99TY8K)")
     print("You can find team id's or personal team id on the Apple Developer website")
@@ -425,22 +426,27 @@ def get_task_files(config, task_name):
     files_array = config[task_name]["files"]
     pairs = []
     for files_task in files_array:
+        change_index = 1
+        if type(files_task) == str:
+            single = files_task
+            files_task = [single, ""]
+            change_index = 0
         if type(files_task) == dict:
             pairs.extend(get_task_files_regex(files_task))
         else:
-            if len(files_task) != 2:
-                print("ERROR: file tasks must be an array of size 2 [src, dst]")
-                exit(1)
             if files_task[0].find("*") != -1:
                 pairs.extend(get_task_files_glob(files_task))
             else:
                 pairs.extend(get_task_files_raw(files_task))
-    if util.value_with_default("change_ext", config[task_name], False):
+    if "change_ext" in config[task_name]:
         change_ext = config[task_name]["change_ext"]
         stripped = []
         for output in pairs:
-            changed = util.change_ext(output[1], change_ext)
-            stripped.append((output[0], changed))
+            changed = util.change_ext(output[change_index], change_ext)
+            if change_index == 1:
+                stripped.append((output[0], changed))
+            elif change_index == 0:
+                stripped.append((changed, output[1]))
         pairs = stripped
     pairs = filter_files(config, task_name, pairs)
     return pairs
@@ -547,11 +553,14 @@ def expand_args(args, config, task_name, input_file, output_file):
         # replace user_vars
         user_vars = [
             "vs_latest",
-            "windows_sdk_version"
+            "windows_sdk_version",
+            "teamid"
         ]
         for uv in user_vars:
             v = "%{" + uv + "}"
             if arg.find(v) != -1:
+                if v == "teamid":
+                    configure_teamid(config)
                 arg = arg.replace(v, config["user_vars"][uv])
         cmd += arg + " "
     return cmd
@@ -700,12 +709,12 @@ def launch(config, files, options):
         cmd = run_config["cmd"]
         cmd = cmd.replace("%{target_path}", t[1])
         cmd = cmd.replace("%{target_name}", t[2])
-        if os.path.splitext(t[1])[0] == ".html":
+        if os.path.splitext(t[1])[1] == ".html":
             run_web(cmd)
         else:
             for o in options[1:]:
                 cmd += " " + o
-            p = subprocess.call(cmd, shell=True)
+            p = subprocess.Popen(cmd, shell=True)
             e = p.wait()
             if e != 0:
                 exit(1)
@@ -855,6 +864,9 @@ def main():
                 continue
             if task["type"] in non_tasks:
                 continue
+            if "explicit" in task.keys():
+                if task["explicit"] and "-" + task_name not in sys.argv:
+                    continue
             if "-n" + task_name in sys.argv:
                 continue
             if "-" + task_name in sys.argv or "-all" in special_args:
