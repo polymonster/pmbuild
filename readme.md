@@ -2,7 +2,15 @@
 
 A build pipeline for game development, it can be used to orchestrate complex multi platform build piplines to transform data into game ready formats, build code and run tests.
 
-# running
+# usage
+
+There must be a file called config.jsn in the current working directory.
+
+```
+pmbuild <profile> <tasks...>
+pmbuild make <profile> <args...>
+pmbuild launch <profile> <args...>
+```
 
 # config.jsn
 
@@ -28,6 +36,35 @@ Configs are written in jsn, a relaxed alternative to json. Define build pipeline
 	}
     }
 }
+```
+
+# display available profiles
+
+```
+pmbuild -help
+usage: pmbuild <profile> <tasks...>
+
+options:
+    -help (display this dialog).
+    -<task> -help (display task help).
+    -cfg (print jsn config for current profile).
+    -verbose (print more).
+
+profiles:
+    config.jsn (edit task settings in here)
+        base
+        mac
+        mac-gl
+        win32
+        win32-vulkan
+        win32-gl
+        ios
+        linux
+        linux-vulkan
+        web
+        android
+        extensions
+        tools
 ```
 
 # variables and inheritence
@@ -91,10 +128,18 @@ copy-wildcards:
 
 # clean
 
-When building transient directories that are not managed inside source control sometimes these directories can become filled with stale data, you can define clean tasks which will 
+When building transient directories that are not managed inside source control sometimes these directories can become filled with stale data, you can define clean tasks which will delete these directories:
 
-
-
+```
+clean: {
+    directories: [
+        "${data_dir}"
+        "${build_dir}"
+        "${bin_dir}"
+        "temp"
+    ]
+}
+```
 
 # tools
 
@@ -119,7 +164,7 @@ you can run tools and feed them files with the file objects describe in copy. We
         args: [
             "xcode4"
             "--renderer=metal"
-	    "--platform_dir=osx"
+            "--platform_dir=osx"
         ]
     }
     
