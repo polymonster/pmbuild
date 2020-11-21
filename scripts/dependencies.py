@@ -135,7 +135,7 @@ def check_up_to_date(dependencies, dest_file):
 def check_up_to_date_single(dest_file, deps):
     dep_filename = util.change_ext(dest_file, ".dep")
     if not os.path.exists(dep_filename):
-        print(os.path.basename(dest_file) + ": deps does not exist.")
+        print("new file: " + os.path.basename(dest_file))
         return False
     dep_ts = os.path.getmtime(dest_file)
     file = open(dep_filename)
@@ -162,13 +162,13 @@ def check_up_to_date_single(dest_file, deps):
         for input_file in d_json["files"][d]:
             # output file does not exist yet
             if not os.path.exists(dest_file):
-                print(os.path.basename(dest_file) + ": does not exist.")
+                print("new file: " + os.path.basename(dest_file))
                 return False
             # output file is out of date
             if os.path.getmtime(input_file["name"]) > dep_ts:
-                print(os.path.basename(dest_file) + ": is out of date.")
+                print(os.path.basename(dest_file) + ": is out-of-date.")
                 return False
-    print(os.path.basename(dest_file) + " up to date")
+    print(os.path.basename(dest_file) + ": up-to-date")
     return True
 
 
