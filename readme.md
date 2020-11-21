@@ -4,7 +4,7 @@ A build pipeline for game development, it can be used to orchestrate complex mul
 
 # config.jsn
 
-Define build pipeline stages in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
+Configs are written in jsn, a relaxed alternative to json. Define build pipeline stages in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
 
 ```c++
 {
@@ -32,7 +32,7 @@ Define build pipeline stages in a `config.jsn` file. A `profile` groups together
 
 you can copy files with a copy task, this is often necessary to move files into a data directory or deploy to a dev kit, simply specify an array of file pairs in a task of type copy, you can supply glob or regex to find files:
 
-```c++
+```yaml
 // copys from src to dest
 copy-base:
 {
@@ -54,6 +54,37 @@ copy-wildcards:
 }
 ```
 
+# variables and inheritence
+
+jsn allows inheritence and variables `${variable}` evaluated with dollar sign where variables are defined in the script. This allows sharing and re-use of tasks to make configs more compact.
+
+```yaml
+{
+    base: {
+        jsn_vars: {
+            data_dir: ""
+        }
+    }
+
+    // mac inherits from base and overrides ${data_dir}
+    mac(base): {
+        jsn_vars: {
+            data_dir: "bin/osx/data"
+        }
+    }
+}
+```
+
+pmbuild also provides some special `%{variables}` evaluated with percentage sign these are evaulated at runtime and some of them are configurable by the user and stored in `config.user.jsn`.
+
+```
+%{vs_latest} = locates the latest installation of visual studio ie (vs2019)
+%{windows_sdk_version} = configurable windows sdk version
+"%{input_file}" = input file from "files" object
+"%{output_file}" = output file from "files" object
+"%{teamid}" = apple developer team id
+```
+
 # tools
 
 you can run tools and feed them files with the file objects describe in copy. We can register tools for <mac, windows or linux> which is the system which pmbuild is currently running on. We can target other platforms such as playstation, xbox but we still build on a windows machine for instance. pmbuild comes bundled with tools:
@@ -61,7 +92,7 @@ you can run tools and feed them files with the file objects describe in copy. We
 - texturec (compress textures, generate mip maps, resize, etc...)
 - pmfx (generate hlsl, glsl, metal or spir-v from pmfx shader source)
 
-```
+```yaml
 {
     tools<mac>: {
         jsn: "${pmbuild_dir}/scripts/jsn/jsn"
@@ -113,6 +144,26 @@ you can run tools and feed them files with the file objects describe in copy. We
             "-t temp/shaders"
             "-source"
         ]
+    }
+}
+```
+
+# Extensions
+
+You can register and call extension modules written in python:
+
+```
+extensions: {
+    models: {
+        search_path: "${pmtech_dir}/tools/pmbuild_ext"
+        module: "pmbuild_ext"
+        function: "run_models"
+    }
+    cr:
+    {
+        search_path: "${pmtech_dir}/tools/pmbuild_ext"
+        module: "pmbuild_ext"
+        function: "run_cr"
     }
 }
 ```
