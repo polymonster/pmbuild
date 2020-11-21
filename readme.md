@@ -32,7 +32,7 @@ Configs are written in jsn, a relaxed alternative to json. Define build pipeline
 ```yaml
 {
     tools<mac>: {
-	// define paths to tools 
+        // define paths to tools 
     }
     
     tools<windows>: {
