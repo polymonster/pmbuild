@@ -2,6 +2,8 @@
 
 A build pipeline for game development, it can be used to orchestrate complex multi platform build piplines to transform data into game ready formats, build code and run tests.
 
+# running
+
 # config.jsn
 
 Configs are written in jsn, a relaxed alternative to json. Define build pipeline stages in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
@@ -26,6 +28,39 @@ Configs are written in jsn, a relaxed alternative to json. Define build pipeline
 	}
     }
 }
+```
+
+# variables and inheritence
+
+jsn allows inheritence and variables `${variable}` evaluated with dollar sign where variables are defined in the script. This allows sharing and re-use of tasks to make configs more compact.
+
+```yaml
+{
+    base: {
+        jsn_vars: {
+            data_dir: ""
+        }
+    }
+
+    // mac inherits from base and overrides ${data_dir}
+    mac(base): {
+        jsn_vars: {
+            data_dir: "bin/osx/data"
+        }
+    }
+}
+```
+
+# special variables
+
+pmbuild also provides some special `%{variables}` evaluated with percentage sign these are evaulated at runtime and some of them are configurable by the user and stored in `config.user.jsn` which you wil prompted for when they are required if they cannot be auto located.
+
+```
+%{vs_latest} = locates the latest installation of visual studio ie (vs2019)
+%{windows_sdk_version} = windows sdk version
+"%{input_file}" = input file from "files" object
+"%{output_file}" = output file from "files" object
+"%{teamid}" = apple developer team id
 ```
 
 # copy
@@ -54,36 +89,12 @@ copy-wildcards:
 }
 ```
 
-# variables and inheritence
+# clean
 
-jsn allows inheritence and variables `${variable}` evaluated with dollar sign where variables are defined in the script. This allows sharing and re-use of tasks to make configs more compact.
+When building transient directories that are not managed inside source control sometimes these directories can become filled with stale data, you can define clean tasks which will 
 
-```yaml
-{
-    base: {
-        jsn_vars: {
-            data_dir: ""
-        }
-    }
 
-    // mac inherits from base and overrides ${data_dir}
-    mac(base): {
-        jsn_vars: {
-            data_dir: "bin/osx/data"
-        }
-    }
-}
-```
 
-pmbuild also provides some special `%{variables}` evaluated with percentage sign these are evaulated at runtime and some of them are configurable by the user and stored in `config.user.jsn`.
-
-```
-%{vs_latest} = locates the latest installation of visual studio ie (vs2019)
-%{windows_sdk_version} = configurable windows sdk version
-"%{input_file}" = input file from "files" object
-"%{output_file}" = output file from "files" object
-"%{teamid}" = apple developer team id
-```
 
 # tools
 
@@ -102,7 +113,7 @@ you can run tools and feed them files with the file objects describe in copy. We
         build_models: "${pmtech_dir}/tools/pmbuild_ext/build_models.py"
         mesh_opt: "${pmtech_dir}/tools/bin/osx/mesh_opt"
     }
-	
+    
     // run premake tool with the provided args
     premake: {
         args: [
@@ -111,7 +122,7 @@ you can run tools and feed them files with the file objects describe in copy. We
 	    "--platform_dir=osx"
         ]
     }
-
+    
     // run texturec tool passing %{input_file}, %{output_file} and %{export_args} driven by files and export.jsn
     texturec: {
         args: [
@@ -148,11 +159,11 @@ you can run tools and feed them files with the file objects describe in copy. We
 }
 ```
 
-# Extensions
+# extensions
 
 You can register and call extension modules written in python:
 
-```
+```yaml
 extensions: {
     models: {
         search_path: "${pmtech_dir}/tools/pmbuild_ext"
