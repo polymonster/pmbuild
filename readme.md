@@ -15,7 +15,7 @@ A build pipeline for game development, it can be used to orchestrate multi platf
 
 # Usage
 
-There must be a file called config.jsn in the current working directory.
+There must be a file called config.jsn in the current working directory, this how you describe your build pipelines.
 
 ```
 pmbuild <profile> <tasks...>
@@ -112,7 +112,7 @@ pmbuild also provides some special `%{variables}` evaluated with percentage sign
 
 # Copy
 
-you can copy files with a copy task, this is often necessary to move files into a data directory or deploy to a dev kit, simply specify an array of file pairs in a task of type copy, you can supply glob or regex to find files:
+You can copy files with a copy task, this is often necessary to move files into a data directory or deploy to a dev kit, simply specify an array of file pairs in a task of type copy, you can supply glob or regex to find files:
 
 ```yaml
 // copys from src to dest
@@ -138,7 +138,7 @@ copy-wildcards:
 
 # Clean
 
-When building transient directories that are not managed inside source control sometimes these directories can become filled with stale data, you can define clean tasks which will delete these directories:
+Clean out stale data and build from fresh, you can define clean tasks which will delete these directories:
 
 ```
 clean: {
@@ -153,10 +153,13 @@ clean: {
 
 # Tools
 
-you can run tools and feed them files with the file objects describe in copy. We can register tools for <mac, windows or linux> which is the system which pmbuild is currently running on. We can target other platforms such as playstation, xbox but we still build on a windows machine for instance. pmbuild comes bundled with tools:
+Run your own tools or scripts and feed them files with the `files` objects as described in the copy task. We can register tools for <mac, windows or linux> which is the system which pmbuild is currently running on. We can target other platforms such as playstation, xbox but we still build on a windows machine for instance. pmbuild comes bundled with tools:
+
 - premake (generate visual studio solutions, xcode workspace, makefiles, android studio projects)
 - texturec (compress textures, generate mip maps, resize, etc...)
 - pmfx (generate hlsl, glsl, metal or spir-v from pmfx shader source)
+- jsn (make game configs in jsn and convert to json for later use)
+
 
 ```yaml
 {
@@ -259,6 +262,41 @@ You can specify `rules` which select files and apply different settings. jsn inh
         }
 }
 ```
+
+# Dependencies
+
+Output dependency info with build timestamps the commandline used to build and lists of input and output files. Dependency info is in json for use in other tools for triggering hot reloading. Add `dependencies: true` to any tool with a `files` object to generate an output `.dep` file for each file that is built, subsequent builds will skip if the dependencies remain up-to-date.
+
+```yaml
+render_configs: {
+    type: jsn
+        args: [
+            "-i %{input_file} -o %{output_file}"
+            "-I ../assets/configs assets/configs",
+            ]
+        files: [
+            ["assets/configs", "${data_dir}/configs"]
+            ["../assets/configs", "${data_dir}/configs"]
+        ]
+	// add dependencies to this task
+        dependencies: true
+}
+```
+```json
+{
+    "cmdline": "../third_party/pmbuild/bin/mac/texturec -f assets/textures/blend_test_fg.png -t RGBA8 --mips -o bin/osx/data/textures/blend_test_fg.dds ",
+    "files": {
+        "bin/osx/data/textures/blend_test_fg.dds": [
+            {
+                "name": "/Users/alex.dixon/dev/pmtech/examples/assets/textures/blend_test_fg.png",
+                "timestamp": 1575376985.285382,
+                "data_file": "data/textures/blend_test_fg.dds"
+            }
+        ]
+    }
+}
+```
+
 
 # Containers
 
