@@ -1,8 +1,6 @@
 # pmbuild
 
-A build pipeline for game development, it can be used to orchestrate complex multi platform build piplines to transform data into game ready formats, build code and run tests.
-
-It is designed to be used locally as well druven from CI services to transfer data from network locations, transform into game ready formats deploy to devkits or package products for submission.
+A build pipeline for game development, it can be used to orchestrate multi platform build piplines to transform data into game ready formats, build code, deploy packages and run tests.
 
 ### supported platforms
 - macOS
