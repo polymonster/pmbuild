@@ -56,7 +56,10 @@ copy-wildcards:
 
 # tools
 
-you can run tools and feed them files with the file objects describe in copy. We can register tools for <mac, windows or linux> which is the system which pmbuild runs on, we can target other platforms such as playstation, xbox but we still build on a windows machine. 
+you can run tools and feed them files with the file objects describe in copy. We can register tools for <mac, windows or linux> which is the system which pmbuild is currently running on. We can target other platforms such as playstation, xbox but we still build on a windows machine for instance. pmbuild comes bundled with tools:
+- premake (generate visual studio solutions, xcode workspace, makefiles, android studio projects)
+- texturec (compress textures, generate mip maps, resize, etc...)
+- pmfx (generate hlsl, glsl, metal or spir-v from pmfx shader source)
 
 ```
 {
@@ -97,6 +100,19 @@ you can run tools and feed them files with the file objects describe in copy. We
         ]
         change_ext: ".dds"
         dependencies: true
+    }
+    
+    // pmfx is a python script which runs and is passed args
+    pmfx: {
+        args: [
+            "-shader_platform hlsl"
+            "-shader_version 5_0"
+            "-i assets/shaders ../assets/shaders"
+            "-o bin/win32/data/pmfx/hlsl"
+            "-h shader_structs"
+            "-t temp/shaders"
+            "-source"
+        ]
     }
 }
 ```
