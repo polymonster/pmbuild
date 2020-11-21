@@ -44,9 +44,9 @@ Configs are written in jsn, a relaxed alternative to json. Define build pipeline
         // mac profile builds tasks for mac platform
         // ..
 	
-	task: {
-	    // define tasks to run
-	}
+        task: {
+            // define tasks to run
+        }
     }
 }
 ```
@@ -299,6 +299,43 @@ launch: {
 
 # network connections / credentials
 
-In a development environment we may be dealing with large amounts of data which is stored on a server, we can mount connections to local area network connections via smb. You can supply credentials for the network connects in plain text, or encrypt them with crytographic quality encryption to be 
+In a development environment we may be dealing with large amounts of data which is stored on a server, we can mount connections to local area network connections via smb. You can supply credentials for the network connects in plain text, or encrypt them with crytographic quality encryption to be stored and accessed with a password:
+
+```
+// plain text
+connect-server:
+{
+    type: connect
+    address: "192.168.0.1" // address or name
+    mount: "game_data" // folder to mount
+    user: "username",
+    password: "pa$$word"
+}
+
+// encrypted credentials
+connect-server:
+{
+    type: connect
+    address: "192.168.0.1" // address or name
+    mount: "game_data" // folder to mount
+    credentials: "username",
+}
+```
+
+To add to the credentials file run:
+
+```
+pmbuild -credentials
+```
+
+A file `credentials.unlocked.jsn` will be generated in the current working directory for you to edit and add credentials to in the form:
+
+```
+{
+    username: "password"
+}
+```
+
+
 
 
