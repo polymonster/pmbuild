@@ -2,6 +2,19 @@
 
 A build pipeline for game development, it can be used to orchestrate complex multi platform build piplines to transform data into game ready formats, build code and run tests.
 
+It is designed to be used locally as well druven from CI services to transfer data from network locations, transform into game ready formats deploy to devkits or package products for submission.
+
+### supported platforms
+- macOS
+- Windows
+- Linux
+
+### supported build toolchains
+- gmake
+- xcodebuild
+- msbuild
+- emmake
+
 # usage
 
 There must be a file called config.jsn in the current working directory.
@@ -16,7 +29,7 @@ pmbuild launch <profile> <args...>
 
 Configs are written in jsn, a relaxed alternative to json. Define build pipeline stages in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
 
-```c++
+```yaml
 {
     tools<mac>: {
 	// define paths to tools 
@@ -95,9 +108,9 @@ pmbuild also provides some special `%{variables}` evaluated with percentage sign
 ```
 %{vs_latest} = locates the latest installation of visual studio ie (vs2019)
 %{windows_sdk_version} = windows sdk version
-"%{input_file}" = input file from "files" object
-"%{output_file}" = output file from "files" object
-"%{teamid}" = apple developer team id
+%{input_file}" = input file from "files" object
+%{output_file}" = output file from "files" object
+%{teamid}" = apple developer team id
 ```
 
 # copy
@@ -223,3 +236,69 @@ extensions: {
     }
 }
 ```
+
+# task types
+
+Each task has a type, you can define this using the `type` member, if the name of the task is the same as a tool, extension or built in function then the `type` member is implicitly added.
+
+```
+copy:
+{
+    files: [
+    	// ..
+    ]
+}
+
+copy-second:
+{
+    // needs to know the type
+    type: copy
+    files: [
+        // ..
+    ]
+}
+```
+
+# make
+
+Make is a special command which is specified before the profile
+
+```
+pmbuild make <profile> <target>
+```
+
+It configures the current environment to build for a specified toolchain and directory, again this uses a `files` object to feed files to the build tool. you can supply a project / make file target name or supply all to build all the projects found by files. This is useful for deploying tests and samples.
+
+```yaml
+make: {
+    toolchain: "msbuild"
+        files: [
+            "build/win32/*.vcxproj"
+        ]
+}
+```
+
+# launch
+
+Launch is a special command like make which can be invoked as follows:
+
+```
+pmbuild launch <profile> <target>
+```
+
+You can launch built executables from the commandline for running tests, again a files object is used to find the exectuables:
+
+```
+launch: {
+    cmd: "%{target_path}"
+        files: [
+            "bin/win32/*.exe"
+        ]
+}
+```
+
+# network connections / credentials
+
+In a development environment we may be dealing with large amounts of data which is stored on a server, we can mount connections to local area network connections via smb. You can supply credentials for the network connects in plain text, or encrypt them with crytographic quality encryption to be 
+
+
