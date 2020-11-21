@@ -41,7 +41,6 @@ Configs are written in jsn, a relaxed alternative to json. Define build pipeline
     {
         // mac profile builds tasks for mac platform
         // ..
-	
         task: {
             // define tasks to run
         }
@@ -239,7 +238,7 @@ You can specify `rules` which select files and apply different settings. jsn inh
     {
         "-t": "RGBA8"
         "--mips": true
-		
+
         rules:
         {
             compess:
@@ -247,19 +246,17 @@ You can specify `rules` which select files and apply different settings. jsn inh
                 files: [
                     "pbr/*.png",
                 ]
-                
                 "-t": "BC3"
             }
-			
             normalmap:
             {
                 files: [
                     "**/*_normal.*"
                 ]
-				
                 "--normalmap": true
             }
         }
+    }
 }
 ```
 
