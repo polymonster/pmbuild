@@ -139,6 +139,7 @@ def locate_windows_sdk():
             else:
                 # 8.1
                 return str(versions[0])
+        print(versions)
     return None
 
 
