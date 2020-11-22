@@ -134,7 +134,6 @@ def locate_windows_sdk():
                 source = os.path.join(sdk_dir, versions[0], "Source")
                 if os.path.exists(source):
                     sub_versions = sorted(os.listdir(source), reverse=True)
-                    print(sub_versions)
                     if len(sub_versions) > 0:
                         return str(sub_versions[0])
             else:
