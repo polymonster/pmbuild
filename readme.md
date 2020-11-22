@@ -172,8 +172,34 @@ copy-wildcards:
     files: [
          ["assets/random_files/*.txt", "bin/text_files"]
          ["assets/random_files/*.json", "bin/json_files"]
-         ["assets/random_files/*.xml", "bin/xml_files"]
+         // recursive
+         ["assets/random_files/**/*.xml", "bin/xml_files"]
     ]
+}
+
+// copies with a regex match and an array of regex sub finding files containing "matchfile", chaning the output directory and file type
+copy-regex:
+{
+    type: copy
+        files: [
+        {
+            match: '^.+?matchfile\\.(.*)'
+            directory: "assets"
+            sub: [
+                ["assets/regex", "bin/regout"]
+                [".txt", ".newext"]
+            ]
+        }
+    ] 
+}
+
+// you can change the extension or add a suffix to the output files
+copy-change-ext:
+{
+    files: [
+         ["assets/random_files/*.txt", "bin/text_files"]
+    ]
+    change_ext: ".newext"
 }
 ```
 
@@ -181,7 +207,7 @@ copy-wildcards:
 
 Clean out stale data and build from fresh, you can define clean tasks which will delete these directories:
 
-```
+```yaml
 clean: {
     directories: [
         "${data_dir}"
@@ -194,7 +220,7 @@ clean: {
 
 # Tools
 
-Run your own tools or scripts and feed them files with the `files` objects as described in the copy task. We can register tools for <mac, windows or linux> which is the system which pmbuild is currently running on. We can target other platforms such as playstation, xbox but we still build on a windows machine for instance:
+Run your own tools or scripts and feed them files with the `files` objects as described in the copy task. We can register tools for <mac, windows or linux> which is the system pmbuild is currently running on. We can target other platforms such as PlayStation or Xbox but we still build on a windows machine and for iOS we target the iOS platform but build from macOS:
 
 
 ```yaml
@@ -209,46 +235,49 @@ Run your own tools or scripts and feed them files with the `files` objects as de
     }
     
     // run premake tool with the provided args
-    premake: {
-        args: [
-            "xcode4"
-            "--renderer=metal"
-            "--platform_dir=osx"
-        ]
-    }
+    mac:
+    {
+        premake: {
+            args: [
+                "xcode4"
+                "--renderer=metal"
+                "--platform_dir=osx"
+            ]
+        }
     
-    // run texturec tool passing %{input_file}, %{output_file} and %{export_args} driven by files and export.jsn
-    texturec: {
-        args: [
-            "-f %{input_file}"
-            "%{export_args}"
-            "-o %{output_file}"
-        ]
-        files: [
-            ["assets/textures", "${data_dir}/textures"]
-            ["../assets/textures", "${data_dir}/textures"]
-        ]
-        excludes: [
-            "export.jsn"
-            "*.txt"
-            "*.DS_Store"
-            "*.dds"
-        ]
-        change_ext: ".dds"
-        dependencies: true
-    }
+        // run texturec tool passing %{input_file}, %{output_file} and %{export_args} driven by files and export.jsn
+        texturec: {
+            args: [
+                "-f %{input_file}"
+                "%{export_args}"
+                "-o %{output_file}"
+            ]
+            files: [
+                ["assets/textures", "${data_dir}/textures"]
+                ["../assets/textures", "${data_dir}/textures"]
+            ]
+            excludes: [
+                "export.jsn"
+                "*.txt"
+                "*.DS_Store"
+                "*.dds"
+            ]
+            change_ext: ".dds"
+            dependencies: true
+        }
     
-    // pmfx is a python script which runs and is passed args
-    pmfx: {
-        args: [
-            "-shader_platform hlsl"
-            "-shader_version 5_0"
-            "-i assets/shaders ../assets/shaders"
-            "-o bin/win32/data/pmfx/hlsl"
-            "-h shader_structs"
-            "-t temp/shaders"
-            "-source"
-        ]
+        // pmfx is a python script which runs and is passed args
+        pmfx: {
+            args: [
+                "-shader_platform hlsl"
+                "-shader_version 5_0"
+                "-i assets/shaders ../assets/shaders"
+                "-o bin/win32/data/pmfx/hlsl"
+                "-h shader_structs"
+                "-t temp/shaders"
+                "-source"
+            ]
+        }
     }
 }
 ```
