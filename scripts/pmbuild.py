@@ -128,6 +128,7 @@ def locate_windows_sdk():
                 break
     if sdk_dir:
         versions = sorted(os.listdir(sdk_dir), reverse=False)
+        print(versions)
         if len(versions) > 0:
             if versions[0] == "10":
                 # windows 10 has sub versions
@@ -139,7 +140,6 @@ def locate_windows_sdk():
             else:
                 # 8.1
                 return str(versions[0])
-        print(versions)
     return None
 
 
@@ -764,7 +764,7 @@ def launch(config, files, options):
 
 # top level help
 def pmbuild_help(config):
-    util.print_header("pmbuild version 4.0-help ")
+    util.print_header("pmbuild version 4.0 -help ")
     print("\nusage: pmbuild <profile> <tasks...>")
     print("\noptions:")
     print("    -help (display this dialog).")
