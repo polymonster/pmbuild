@@ -217,11 +217,9 @@ def configure_vc_vars_all(config):
             return
     # attempt to auto locate
     auto_vc_vars = locate_vc_vars_all()
-    auto_msbuild = locate_msbulild()
     if auto_vc_vars:
         auto_vc_vars = os.path.dirname(auto_vc_vars)
         update_user_config("vcvarsall_dir", auto_vc_vars, config)
-        update_user_config("msbuild", auto_msbuild, config)
         return
     # user input
     while True:
@@ -407,13 +405,14 @@ def filter_files(config, task_name, files):
                 bn = os.path.basename(directory)
                 dir_files = sorted(os.listdir(directory))
                 filtered_files = []
-                for file in dir_files:
-                    if file in j["container"]["files"]:
+                for file in j["container"]["files"]:
+                    if file in dir_files:
                         filtered_files.append(file)
-                        continue
-                    for pattern in j["container"]["files"]:
-                        if fnmatch.fnmatch(file, pattern):
-                            filtered_files.append(file)
+                    else:
+                        pattern = file
+                        for df in dir_files:
+                            if fnmatch.fnmatch(file, pattern):
+                                filtered_files.append(file)
                 files = ""
                 dest_file = ""
                 for file in filtered_files:
@@ -426,9 +425,15 @@ def filter_files(config, task_name, files):
                     files += fp + "\n"
                 container_file = en.replace("export.jsn", bn + ".txt")
                 current_files = ""
+                newest = 0
+                for f in filtered_files:
+                    fn = os.path.join(directory, f)
+                    newest = max(os.path.getmtime(fn), newest)
+                built = 0
                 if os.path.exists(container_file):
                     current_files = open(container_file, "r").read()
-                if current_files != files:
+                    built = os.path.getmtime(container_file)
+                if current_files != files or newest > built:
                     open(container_file, "w+").write(files)
                 if container_file not in lookups:
                     lookups[container_file] = (container_file, dest_file)
@@ -618,10 +623,14 @@ def make_for_toolchain(jsn_config, file, options):
     make_config = jsn_config["make"]
     toolchain = make_config["toolchain"]
 
+    # get msbuild location
     msbuild = ""
     if toolchain == "msbuild":
         msbuild = locate_msbulild()
-        print(msbuild)
+        if not msbuild:
+            msbuild = "msbuild"
+        else:
+            msbuild = cgu.in_quotes(msbuild)
 
     cmds = {
         "make": "make",
@@ -726,7 +735,9 @@ def launch(config, files, options):
         if options[0] == "all" or options[0] == tn:
             targets.append((os.path.dirname(file), os.path.basename(file), tn))
     # switch to bin dir
+    print(targets)
     for t in targets:
+        print(t)
         os.chdir(t[0])
         cmd = run_config["cmd"]
         cmd = cmd.replace("%{target_path}", t[1])
@@ -738,6 +749,7 @@ def launch(config, files, options):
                 cmd += " " + o
             p = subprocess.Popen(cmd, shell=True)
             e = p.wait()
+            print(e)
             if e != 0:
                 exit(1)
         os.chdir(cwd)
