@@ -1,6 +1,10 @@
 # pmbuild
 
-A build pipeline for game development, it can be used to orchestrate multi platform build piplines to transform data into game ready formats, build code, deploy packages and run tests.
+A code and data build system for game development, it can be used to orchestrate multi platform build piplines to transform source assets (textures, shaders, models) into game ready formats, build code, deploy packages and run tests. pmbuild provides a frame work to add build tasks and integrate your own tools and helps reduce the amount of 'glue' code required to run various build steps.
+
+It is designed to be run locally to deploy to devkits or build code to run tests from the commandline but you can also use pmbuild in CI services to reduce the amount of code required in your CI system and so that local users have the same system to build and test with.
+
+It is not a replacement for msbuild, xcodebuild, premake or cmake and so forth, pmbuild is designed to use other build and pre-build systems and the pmbuild system simply provides tools and infrasturcture to help.
 
 ### Supported Platforms
 - macOS
@@ -13,19 +17,57 @@ A build pipeline for game development, it can be used to orchestrate multi platf
 - msbuild
 - emmake
 
+### Built-in Tasks
+- copy
+- clean
+- connect (smb connections with credentials)
+- premake (generate visual studio solutions, xcode workspace, makefiles, android studio projects)
+- texturec (compress textures, generate mip maps, resize, etc...)
+- pmfx (generate hlsl, glsl, metal or spir-v from pmfx shader source)
+- jsn (make game configs in jsn and convert to json for later use)
+
+### Extendible
+
+Bring your own tools and build scripts and hook them into pmbuild.
+
 # Usage
 
-There must be a file called config.jsn in the current working directory, this how you describe your build pipelines.
+pmbuild is a CLI there must be a file called config.jsn in the current working directory, this how you describe your build pipelines. Add the pmbuild root directory to your path for convenience: 
 
 ```
+# runs build tasks
 pmbuild <profile> <tasks...>
+
+# builds code with xcodebuild, msbuild, makesfiles + clang... configure your own toolchains
 pmbuild make <profile> <args...>
+
+# launch built executables to run tests, pass "all" to run all built exe's in a directoru
 pmbuild launch <profile> <args...>
+```
+
+By default you can run all non-explicit tasks by simply running:
+
+```
+# run all tasks
+pmbuild <profile>
+
+# equivalent to 
+pmbuild <profile> -all
+```
+
+You can run a single task or a selection of task by passing the task name, or you can supply `-n<task_name>` to exclude a task:
+
+```
+# runs 2 tasks
+pmbuild mac -premake -texturec
+
+# rus all tasks and excludes copy
+pmbuild mac -all -ncopy
 ```
 
 # config.jsn
 
-Configs are written in jsn, a relaxed alternative to json. Define build pipeline stages in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
+Configs are written in [https;//github.com/polymonster/jsn](jsn). Define build tasks in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
 
 ```yaml
 {
@@ -130,8 +172,34 @@ copy-wildcards:
     files: [
          ["assets/random_files/*.txt", "bin/text_files"]
          ["assets/random_files/*.json", "bin/json_files"]
-         ["assets/random_files/*.xml", "bin/xml_files"]
+         // recursive
+         ["assets/random_files/**/*.xml", "bin/xml_files"]
     ]
+}
+
+// copies with a regex match and an array of regex sub finding files containing "matchfile", chaning the output directory and file type
+copy-regex:
+{
+    type: copy
+        files: [
+        {
+            match: '^.+?matchfile\\.(.*)'
+            directory: "assets"
+            sub: [
+                ["assets/regex", "bin/regout"]
+                [".txt", ".newext"]
+            ]
+        }
+    ] 
+}
+
+// you can change the extension or add a suffix to the output files
+copy-change-ext:
+{
+    files: [
+         ["assets/random_files/*.txt", "bin/text_files"]
+    ]
+    change_ext: ".newext"
 }
 ```
 
@@ -139,7 +207,7 @@ copy-wildcards:
 
 Clean out stale data and build from fresh, you can define clean tasks which will delete these directories:
 
-```
+```yaml
 clean: {
     directories: [
         "${data_dir}"
@@ -152,12 +220,7 @@ clean: {
 
 # Tools
 
-Run your own tools or scripts and feed them files with the `files` objects as described in the copy task. We can register tools for <mac, windows or linux> which is the system which pmbuild is currently running on. We can target other platforms such as playstation, xbox but we still build on a windows machine for instance. pmbuild comes bundled with tools:
-
-- premake (generate visual studio solutions, xcode workspace, makefiles, android studio projects)
-- texturec (compress textures, generate mip maps, resize, etc...)
-- pmfx (generate hlsl, glsl, metal or spir-v from pmfx shader source)
-- jsn (make game configs in jsn and convert to json for later use)
+Run your own tools or scripts and feed them files with the `files` objects as described in the copy task. We can register tools for <mac, windows or linux> which is the system pmbuild is currently running on. We can target other platforms such as PlayStation or Xbox but we still build on a windows machine and for iOS we target the iOS platform but build from macOS:
 
 
 ```yaml
@@ -172,46 +235,49 @@ Run your own tools or scripts and feed them files with the `files` objects as de
     }
     
     // run premake tool with the provided args
-    premake: {
-        args: [
-            "xcode4"
-            "--renderer=metal"
-            "--platform_dir=osx"
-        ]
-    }
+    mac:
+    {
+        premake: {
+            args: [
+                "xcode4"
+                "--renderer=metal"
+                "--platform_dir=osx"
+            ]
+        }
     
-    // run texturec tool passing %{input_file}, %{output_file} and %{export_args} driven by files and export.jsn
-    texturec: {
-        args: [
-            "-f %{input_file}"
-            "%{export_args}"
-            "-o %{output_file}"
-        ]
-        files: [
-            ["assets/textures", "${data_dir}/textures"]
-            ["../assets/textures", "${data_dir}/textures"]
-        ]
-        excludes: [
-            "export.jsn"
-            "*.txt"
-            "*.DS_Store"
-            "*.dds"
-        ]
-        change_ext: ".dds"
-        dependencies: true
-    }
+        // run texturec tool passing %{input_file}, %{output_file} and %{export_args} driven by files and export.jsn
+        texturec: {
+            args: [
+                "-f %{input_file}"
+                "%{export_args}"
+                "-o %{output_file}"
+            ]
+            files: [
+                ["assets/textures", "${data_dir}/textures"]
+                ["../assets/textures", "${data_dir}/textures"]
+            ]
+            excludes: [
+                "export.jsn"
+                "*.txt"
+                "*.DS_Store"
+                "*.dds"
+            ]
+            change_ext: ".dds"
+            dependencies: true
+        }
     
-    // pmfx is a python script which runs and is passed args
-    pmfx: {
-        args: [
-            "-shader_platform hlsl"
-            "-shader_version 5_0"
-            "-i assets/shaders ../assets/shaders"
-            "-o bin/win32/data/pmfx/hlsl"
-            "-h shader_structs"
-            "-t temp/shaders"
-            "-source"
-        ]
+        // pmfx is a python script which runs and is passed args
+        pmfx: {
+            args: [
+                "-shader_platform hlsl"
+                "-shader_version 5_0"
+                "-i assets/shaders ../assets/shaders"
+                "-o bin/win32/data/pmfx/hlsl"
+                "-h shader_structs"
+                "-t temp/shaders"
+                "-source"
+            ]
+        }
     }
 }
 ```
@@ -275,7 +341,7 @@ render_configs: {
             ["assets/configs", "${data_dir}/configs"]
             ["../assets/configs", "${data_dir}/configs"]
         ]
-	// add dependencies to this task
+        // add dependencies to this task
         dependencies: true
 }
 ```
@@ -442,3 +508,23 @@ A file `credentials.unlocked.jsn` will be generated in the current working direc
     username: "password"
 }
 ```
+
+# Explicit Tasks
+
+Tasks can be tasked as explicit so that you must specify `-<task_name>` from the commandline and they do not get included automatically with `-all`. This is useful if you have build tasks which you may only need to run infrequently and take a long time to complete. Building thirdpaty libs which are unpated infreqently is an example of this:
+
+```
+libs: {
+    type: shell
+        explicit: true
+            commands: [
+                "cd ../third_party && ../pmbuild bullet-ios"
+                "cd ../third_party && ../pmbuild make bullet-ios all -destination generic/platform=iOS -configuration Release -quiet"
+                "cd ../third_party && ../pmbuild make bullet-ios all -destination generic/platform=iOS -configuration Debug -quiet"
+            ]
+    }
+}
+```
+
+
+
