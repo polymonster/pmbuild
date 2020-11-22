@@ -9,10 +9,10 @@ import importlib
 import glob
 import re
 import shutil
-import cryptography
 import threading
 import webbrowser
 import fnmatch
+import cryptography
 
 import util
 import dependencies
@@ -268,6 +268,7 @@ def configure_user(config, args):
             locate_vs_latest(config_user["user_vars"])
             configure_vc_vars_all(config_user["user_vars"])
             configure_windows_sdk(config_user["user_vars"])
+            print(config_user["user_vars"])
     if os.path.exists("config.user.jsn"):
         config_user = jsn.loads(open("config.user.jsn", "r").read())
         util.merge_dicts(config, config_user)
