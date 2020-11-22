@@ -472,7 +472,15 @@ launch: {
 
 # Network Connections / Credentials
 
-In a development environment we may need to synchronise large amounts of data which is stored on a server, or we may need to build artifacts to a server or deploy to a dev kit. we can mount connections to local area network connections via smb. You can supply credentials for the network connects in plain text, or encrypt them with crytographic quality encryption to be stored and accessed with a password:
+In a development environment we may need to synchronise large amounts of data which is stored on a server, or we may need to build artifacts to a server or deploy to a dev kit. we can mount connections to local area network connections via smb. You can supply credentials for the network connects in plain text, or encrypt them with crytographic quality encryption to be stored and accessed with a password.
+
+To use encrypted credentials you need to install the python cryptography module:
+
+```
+pip install cryptography
+```
+
+Then define connections supplying server address, folder to mount and credentials or user/password:
 
 ```yaml
 // plain text
