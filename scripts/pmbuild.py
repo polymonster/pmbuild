@@ -128,13 +128,13 @@ def locate_windows_sdk():
                 break
     if sdk_dir:
         versions = sorted(os.listdir(sdk_dir), reverse=False)
-        print(versions)
         if len(versions) > 0:
             if versions[0] == "10":
                 # windows 10 has sub versions
                 source = os.path.join(sdk_dir, versions[0], "Source")
                 if os.path.exists(source):
                     sub_versions = sorted(os.listdir(source), reverse=False)
+                    print(sub_versions)
                     if len(sub_versions) > 0:
                         return str(sub_versions[0])
             else:
