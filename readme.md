@@ -1,6 +1,10 @@
 # pmbuild
 
-A build pipeline for game development, it can be used to orchestrate multi platform build piplines to transform data into game ready formats, build code, deploy packages and run tests.
+A code and data build system for game development, it can be used to orchestrate multi platform build piplines to transform source assets (textures, shaders, models) into game ready formats, build code, deploy packages and run tests. pmbuild provides a frame work to add build tasks and integrate your own tools and helps reduce the amount of 'glue' code required to run various build steps.
+
+It is designed to be run locally to deploy to devkits or build code to run tests from the commandline but you can also use pmbuild in CI services to reduce the amount of code required in your CI system and so that local users have the same system to build and test with.
+
+It is not a replacement for msbuild, xcodebuild, premake or cmake and so forth, pmbuild is designed to use other build and pre-build systems and the pmbuild system simply provides tools and infrasturcture to help.
 
 ### Supported Platforms
 - macOS
@@ -13,19 +17,54 @@ A build pipeline for game development, it can be used to orchestrate multi platf
 - msbuild
 - emmake
 
+### Built-in Tasks
+- copy
+- clean
+- connect (smb connections with credentials)
+- premake (generate visual studio solutions, xcode workspace, makefiles, android studio projects)
+- texturec (compress textures, generate mip maps, resize, etc...)
+- pmfx (generate hlsl, glsl, metal or spir-v from pmfx shader source)
+- jsn (make game configs in jsn and convert to json for later use)
+
+### Extendible
+
+Bring your own tools and build scripts and hook them into pmbuild.
+
 # Usage
 
-There must be a file called config.jsn in the current working directory, this how you describe your build pipelines.
+There must be a file called config.jsn in the current working directory, this how you describe your build pipelines. Add the pmbuild root directory to your path for convenience: 
 
 ```
+# runs build tasks
 pmbuild <profile> <tasks...>
+# builds code with xcodebuild, msbuild, makesfiles + clang... configure your own toolchains
 pmbuild make <profile> <args...>
+# launch built executables to run tests, pass "all" to run all built exe's in a directoru
 pmbuild launch <profile> <args...>
+```
+
+By default you can run all non-explicit tasks by simply running:
+
+```
+# run all tasks
+pmbuild <profile>
+# equivalent to 
+pmbuild <profile> -all
+```
+
+You can run a single task or a selection of task by passing the task name, or you can supply `-n<task_name>` to exclude a task:
+
+```
+# runs 2 tasks
+pmbuild mac -premake -texturec
+
+# rus all tasks and excludes copy
+pmbuild mac -all -ncopy
 ```
 
 # config.jsn
 
-Configs are written in jsn, a relaxed alternative to json. Define build pipeline stages in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
+Configs are written in [https;//github.com/polymonster/jsn](jsn). Define build tasks in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
 
 ```yaml
 {
@@ -152,12 +191,7 @@ clean: {
 
 # Tools
 
-Run your own tools or scripts and feed them files with the `files` objects as described in the copy task. We can register tools for <mac, windows or linux> which is the system which pmbuild is currently running on. We can target other platforms such as playstation, xbox but we still build on a windows machine for instance. pmbuild comes bundled with tools:
-
-- premake (generate visual studio solutions, xcode workspace, makefiles, android studio projects)
-- texturec (compress textures, generate mip maps, resize, etc...)
-- pmfx (generate hlsl, glsl, metal or spir-v from pmfx shader source)
-- jsn (make game configs in jsn and convert to json for later use)
+Run your own tools or scripts and feed them files with the `files` objects as described in the copy task. We can register tools for <mac, windows or linux> which is the system which pmbuild is currently running on. We can target other platforms such as playstation, xbox but we still build on a windows machine for instance:
 
 
 ```yaml
