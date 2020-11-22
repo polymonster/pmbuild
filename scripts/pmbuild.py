@@ -618,8 +618,10 @@ def make_for_toolchain(jsn_config, file, options):
     make_config = jsn_config["make"]
     toolchain = make_config["toolchain"]
 
-    msbuild = locate_msbulild()
-    print(msbuild)
+    msbuild = ""
+    if toolchain == "msbuild":
+        msbuild = locate_msbulild()
+        print(msbuild)
 
     cmds = {
         "make": "make",
