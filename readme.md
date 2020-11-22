@@ -32,13 +32,15 @@ Bring your own tools and build scripts and hook them into pmbuild.
 
 # Usage
 
-There must be a file called config.jsn in the current working directory, this how you describe your build pipelines. Add the pmbuild root directory to your path for convenience: 
+pmbuild is a CLI there must be a file called config.jsn in the current working directory, this how you describe your build pipelines. Add the pmbuild root directory to your path for convenience: 
 
 ```
 # runs build tasks
 pmbuild <profile> <tasks...>
+
 # builds code with xcodebuild, msbuild, makesfiles + clang... configure your own toolchains
 pmbuild make <profile> <args...>
+
 # launch built executables to run tests, pass "all" to run all built exe's in a directoru
 pmbuild launch <profile> <args...>
 ```
@@ -48,6 +50,7 @@ By default you can run all non-explicit tasks by simply running:
 ```
 # run all tasks
 pmbuild <profile>
+
 # equivalent to 
 pmbuild <profile> -all
 ```
@@ -309,7 +312,7 @@ render_configs: {
             ["assets/configs", "${data_dir}/configs"]
             ["../assets/configs", "${data_dir}/configs"]
         ]
-	// add dependencies to this task
+        // add dependencies to this task
         dependencies: true
 }
 ```
@@ -476,3 +479,23 @@ A file `credentials.unlocked.jsn` will be generated in the current working direc
     username: "password"
 }
 ```
+
+# Explicit Tasks
+
+Tasks can be tasked as explicit so that you must specify `-<task_name>` from the commandline and they do not get included automatically with `-all`. This is useful if you have build tasks which you may only need to run infrequently and take a long time to complete. Building thirdpaty libs which are unpated infreqently is an example of this:
+
+```
+libs: {
+    type: shell
+        explicit: true
+            commands: [
+                "cd ../third_party && ../pmbuild bullet-ios"
+                "cd ../third_party && ../pmbuild make bullet-ios all -destination generic/platform=iOS -configuration Release -quiet"
+                "cd ../third_party && ../pmbuild make bullet-ios all -destination generic/platform=iOS -configuration Debug -quiet"
+            ]
+    }
+}
+```
+
+
+
