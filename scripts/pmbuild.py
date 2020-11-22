@@ -12,21 +12,20 @@ import shutil
 import threading
 import webbrowser
 import fnmatch
-import cryptography
 
 import util
 import dependencies
 import jsn.jsn as jsn
 import cgu.cgu as cgu
 
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from http.server import HTTPServer, CGIHTTPRequestHandler
 
 
 # prompts user for password to access encrypted credentials files
 def prompt_password():
+    import cryptography
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    from cryptography.hazmat.primitives import hashes
     password = getpass.getpass("Enter Password: ")
     password = bytes(password, encoding='utf8')
     kdf = PBKDF2HMAC(
@@ -40,6 +39,8 @@ def prompt_password():
 
 # reads and decodes credentials into dict, taking key from prompt_password
 def read_and_decode_credentials(key):
+    import cryptography
+    from cryptography.fernet import Fernet
     if not key:
         key = prompt_password()
     f = Fernet(key)
@@ -53,6 +54,7 @@ def read_and_decode_credentials(key):
                 key = prompt_password()
                 f = Fernet(key)
         credentials = jsn.loads(credentials.decode("utf-8"))
+        print(credentials)
         return credentials
     return None
 
@@ -71,6 +73,8 @@ def lookup_credentials(lookup):
 
 # decrypt credential files into credentials.unlocked.jsn to allow user edits, and the encrypts into credentials.bin
 def edit_credentials():
+    import cryptography
+    from cryptography.fernet import Fernet
     credentials = {
         "example_user": "example_password",
         "another_user": "another_password"
@@ -84,11 +88,12 @@ def edit_credentials():
     file = open("credentials.unlocked.jsn", "w+")
     file.write(json.dumps(credentials, indent=4))
     file.close()
-    subprocess.call("open credentials.unlocked.jsn", shell=True)
+    util.open_text_editor("credentials.unlocked.jsn")
     print("Make changes in credentials.unlocked.jsn")
     input("Then Press Enter to continue...")
     file = open("credentials.unlocked.jsn", "r")
     new_credentials = json.dumps(jsn.loads(file.read()), indent=4)
+    file.close()
     os.remove("credentials.unlocked.jsn")
     file = open("credentials.bin", "wb+")
     token = f.encrypt(bytes(new_credentials, encoding='utf8'))

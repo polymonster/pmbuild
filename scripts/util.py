@@ -128,6 +128,17 @@ def walk(directory):
         for file in files:
             file_list.append(sanitize_file_path(os.path.join(root, file)))
     return file_list
+
+
+# opens a file in text editor for user input
+def open_text_editor(file):
+    pn = get_platform_name()
+    cmd = {
+        "mac": "open -a TextEdit",
+        "windows": "notepad.exe",
+        "linux": "gedit"
+    }
+    os.system(cmd[pn] + " " + file)
     
 
 # print duration of job, ts is start time
