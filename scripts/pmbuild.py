@@ -97,7 +97,9 @@ def edit_credentials():
 
 # writes a required value input by the user, into config.user.jsn
 def update_user_config(k, v, config):
-    config[k] = v
+    if "user_vars" not in config:
+        config["user_vars"] = dict()
+    config["user_vars"][k] = v
     user = dict()
     user["user_vars"] = dict()
     if os.path.exists("config.user.jsn"):
@@ -559,7 +561,7 @@ def expand_args(args, config, task_name, input_file, output_file):
         for uv in user_vars:
             v = "%{" + uv + "}"
             if arg.find(v) != -1:
-                if v == "teamid":
+                if uv == "teamid":
                     configure_teamid(config)
                 arg = arg.replace(v, config["user_vars"][uv])
         cmd += arg + " "
