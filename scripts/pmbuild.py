@@ -196,6 +196,19 @@ def locate_vc_vars_all():
     return None
 
 
+# attempt to locate vc vars all by looking in program files, and finding visual studio installations
+def locate_msbulild():
+    vs_dir = locate_vs_root()
+    if len(vs_dir) == 0:
+        return None
+    pattern = os.path.join(vs_dir, "**/msbuild.exe")
+    # if we reverse sort then we get the latest
+    msbuild = sorted(glob.glob(pattern, recursive=True), reverse=False)
+    if len(msbuild) > 0:
+        return msbuild[0]
+    return None
+
+
 # windows only, configure vcvarsall directory for commandline vc compilation
 def configure_vc_vars_all(config):
     # already exists
@@ -204,9 +217,11 @@ def configure_vc_vars_all(config):
             return
     # attempt to auto locate
     auto_vc_vars = locate_vc_vars_all()
+    auto_msbuild = locate_msbulild()
     if auto_vc_vars:
         auto_vc_vars = os.path.dirname(auto_vc_vars)
         update_user_config("vcvarsall_dir", auto_vc_vars, config)
+        update_user_config("msbuild", auto_msbuild, config)
         return
     # user input
     while True:
@@ -603,11 +618,14 @@ def make_for_toolchain(jsn_config, file, options):
     make_config = jsn_config["make"]
     toolchain = make_config["toolchain"]
 
+    msbuild = locate_msbulild()
+    print(msbuild)
+
     cmds = {
         "make": "make",
         "emmake": "emmake make",
         "xcodebuild": "xcodebuild",
-        "msbuild": '"C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\msbuild.exe"'
+        "msbuild": msbuild
     }
     cmd = cmds[toolchain]
 
