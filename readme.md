@@ -1,23 +1,21 @@
 # pmbuild
 
-A build pipeline for game development, it can be used to orchestrate complex multi platform build piplines to transform data into game ready formats, build code and run tests.
+A build pipeline for game development, it can be used to orchestrate multi platform build piplines to transform data into game ready formats, build code, deploy packages and run tests.
 
-It is designed to be used locally as well druven from CI services to transfer data from network locations, transform into game ready formats deploy to devkits or package products for submission.
-
-### supported platforms
+### Supported Platforms
 - macOS
 - Windows
 - Linux
 
-### supported build toolchains
+### Supported Build Toolchains
 - gmake
 - xcodebuild
 - msbuild
 - emmake
 
-# usage
+# Usage
 
-There must be a file called config.jsn in the current working directory.
+There must be a file called config.jsn in the current working directory, this how you describe your build pipelines.
 
 ```
 pmbuild <profile> <tasks...>
@@ -43,7 +41,6 @@ Configs are written in jsn, a relaxed alternative to json. Define build pipeline
     {
         // mac profile builds tasks for mac platform
         // ..
-	
         task: {
             // define tasks to run
         }
@@ -51,7 +48,7 @@ Configs are written in jsn, a relaxed alternative to json. Define build pipeline
 }
 ```
 
-# display available profiles
+# Display Available Profiles
 
 ```
 pmbuild -help
@@ -80,7 +77,7 @@ profiles:
         tools
 ```
 
-# variables and inheritence
+# Variables and Inheritence
 
 jsn allows inheritence and variables `${variable}` evaluated with dollar sign where variables are defined in the script. This allows sharing and re-use of tasks to make configs more compact.
 
@@ -100,7 +97,7 @@ jsn allows inheritence and variables `${variable}` evaluated with dollar sign wh
 }
 ```
 
-# special variables
+# Special Variables
 
 pmbuild also provides some special `%{variables}` evaluated with percentage sign these are evaulated at runtime and some of them are configurable by the user and stored in `config.user.jsn` which you wil prompted for when they are required if they cannot be auto located.
 
@@ -112,9 +109,9 @@ pmbuild also provides some special `%{variables}` evaluated with percentage sign
 %{teamid}" = apple developer team id
 ```
 
-# copy
+# Copy
 
-you can copy files with a copy task, this is often necessary to move files into a data directory or deploy to a dev kit, simply specify an array of file pairs in a task of type copy, you can supply glob or regex to find files:
+You can copy files with a copy task, this is often necessary to move files into a data directory or deploy to a dev kit, simply specify an array of file pairs in a task of type copy, you can supply glob or regex to find files:
 
 ```yaml
 // copys from src to dest
@@ -138,9 +135,9 @@ copy-wildcards:
 }
 ```
 
-# clean
+# Clean
 
-When building transient directories that are not managed inside source control sometimes these directories can become filled with stale data, you can define clean tasks which will delete these directories:
+Clean out stale data and build from fresh, you can define clean tasks which will delete these directories:
 
 ```
 clean: {
@@ -153,12 +150,15 @@ clean: {
 }
 ```
 
-# tools
+# Tools
 
-you can run tools and feed them files with the file objects describe in copy. We can register tools for <mac, windows or linux> which is the system which pmbuild is currently running on. We can target other platforms such as playstation, xbox but we still build on a windows machine for instance. pmbuild comes bundled with tools:
+Run your own tools or scripts and feed them files with the `files` objects as described in the copy task. We can register tools for <mac, windows or linux> which is the system which pmbuild is currently running on. We can target other platforms such as playstation, xbox but we still build on a windows machine for instance. pmbuild comes bundled with tools:
+
 - premake (generate visual studio solutions, xcode workspace, makefiles, android studio projects)
 - texturec (compress textures, generate mip maps, resize, etc...)
 - pmfx (generate hlsl, glsl, metal or spir-v from pmfx shader source)
+- jsn (make game configs in jsn and convert to json for later use)
+
 
 ```yaml
 {
@@ -216,7 +216,115 @@ you can run tools and feed them files with the file objects describe in copy. We
 }
 ```
 
-# extensions
+# export.jsn
+
+You can use export.jsn files in data directories to specify per directory or per file command line arguments to run. For example when converting textures we may want certain textures to be converted to a different format to others. export.jsn files override each other hierarchically by directory so you can have a single export.jsn at the root of a directory tree.
+
+```
+{
+    texturec:
+    {
+        "-t": "RGBA8",
+        "--mips": true
+    }
+}
+```
+
+You can specify `rules` which select files and apply different settings. jsn inheritence is used here so you can override or inherit the base settings:
+
+```yaml
+{
+    texturec:
+    {
+        "-t": "RGBA8"
+        "--mips": true
+
+        rules:
+        {
+            compess:
+            {
+                files: [
+                    "pbr/*.png",
+                ]
+                "-t": "BC3"
+            }
+            normalmap:
+            {
+                files: [
+                    "**/*_normal.*"
+                ]
+                "--normalmap": true
+            }
+        }
+    }
+}
+```
+
+# Dependencies
+
+Output dependency info with build timestamps the commandline used to build and lists of input and output files. Dependency info is in json for use in other tools for triggering hot reloading. Add `dependencies: true` to any tool with a `files` object to generate an output `.dep` file for each file that is built, subsequent builds will skip if the dependencies remain up-to-date.
+
+```yaml
+render_configs: {
+    type: jsn
+        args: [
+            "-i %{input_file} -o %{output_file}"
+            "-I ../assets/configs assets/configs",
+            ]
+        files: [
+            ["assets/configs", "${data_dir}/configs"]
+            ["../assets/configs", "${data_dir}/configs"]
+        ]
+	// add dependencies to this task
+        dependencies: true
+}
+```
+```json
+{
+    "cmdline": "../third_party/pmbuild/bin/mac/texturec -f assets/textures/blend_test_fg.png -t RGBA8 --mips -o bin/osx/data/textures/blend_test_fg.dds ",
+    "files": {
+        "bin/osx/data/textures/blend_test_fg.dds": [
+            {
+                "name": "/Users/alex.dixon/dev/pmtech/examples/assets/textures/blend_test_fg.png",
+                "timestamp": 1575376985.285382,
+                "data_file": "data/textures/blend_test_fg.dds"
+            }
+        ]
+    }
+}
+```
+
+
+# Containers
+
+Sometimes in source asset data we may have a collection of files in a directory we want to group together to concatonate or merge them... for instance if we have individual images for cubemap faces and we want to pass them to a tool to spit out a single cubemap texture. Specify container and `files` comprised of an array of filenames or globs, these files will be written into a .txt file you can forward to other tools.
+
+```yaml
+{
+    // specify files in specific order
+    container:
+    {
+        files: [
+            "posx.jpg",
+            "negx.jpg",
+            "posy.jpg",
+            "negy.jpg",
+            "posz.jpg",
+            "negz.jpg"   
+        ]
+    }
+    
+    // adds all jpg files in sorted list
+    container:
+    {
+        files: [
+            "*.jpg"
+        ]
+    }
+}
+```
+
+# Extensions
 
 You can register and call extension modules written in python:
 
@@ -236,7 +344,7 @@ extensions: {
 }
 ```
 
-# task types
+# Task Types
 
 Each task has a type, you can define this using the `type` member, if the name of the task is the same as a tool, extension or built in function then the `type` member is implicitly added.
 
@@ -258,7 +366,7 @@ copy-second:
 }
 ```
 
-# make
+# Make
 
 Make is a special command which is specified before the profile
 
@@ -277,7 +385,7 @@ make: {
 }
 ```
 
-# launch
+# Launch
 
 Launch is a special command like make which can be invoked as follows:
 
@@ -296,7 +404,7 @@ launch: {
 }
 ```
 
-# network connections / credentials
+# Network Connections / Credentials
 
 In a development environment we may need to synchronise large amounts of data which is stored on a server, or we may need to build artifacts to a server or deploy to a dev kit. we can mount connections to local area network connections via smb. You can supply credentials for the network connects in plain text, or encrypt them with crytographic quality encryption to be stored and accessed with a password:
 
@@ -329,7 +437,7 @@ pmbuild -credentials
 
 A file `credentials.unlocked.jsn` will be generated in the current working directory for you to edit and add credentials to in the form:
 
-```
+```yaml
 {
     username: "password"
 }
