@@ -417,8 +417,8 @@ def filter_files(config, task_name, files):
                     else:
                         pattern = file
                         for df in dir_files:
-                            if fnmatch.fnmatch(file, pattern):
-                                filtered_files.append(file)
+                            if fnmatch.fnmatch(df, pattern):
+                                filtered_files.append(df)
                 files = ""
                 dest_file = ""
                 for file in filtered_files:
