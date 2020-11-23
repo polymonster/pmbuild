@@ -662,7 +662,7 @@ def make_for_toolchain(jsn_config, file, options):
 
     # build final cli command
     if "workspace" in make_config.keys():
-        cmdline = cmd + " -workspace pmtech_examples_osx.xcworkspace" + " -scheme " + file + " " + extra_args
+        cmdline = cmd + " -workspace " + make_config["workspace"] + " -scheme " + file + " " + extra_args
     else:
         cmdline = cmd + " " + target_option + " " + file + " " + extra_args
 
