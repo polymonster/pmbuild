@@ -741,9 +741,7 @@ def launch(config, files, options):
         if options[0] == "all" or options[0] == tn:
             targets.append((os.path.dirname(file), os.path.basename(file), tn))
     # switch to bin dir
-    print(targets)
     for t in targets:
-        print(t)
         os.chdir(t[0])
         cmd = run_config["cmd"]
         cmd = cmd.replace("%{target_path}", t[1])
@@ -755,7 +753,6 @@ def launch(config, files, options):
                 cmd += " " + o
             p = subprocess.Popen(cmd, shell=True)
             e = p.wait()
-            print(e)
             if e != 0:
                 exit(1)
         os.chdir(cwd)
