@@ -72,11 +72,11 @@ Configs are written in [https;//github.com/polymonster/jsn](jsn). Define build t
 ```yaml
 {
     tools<mac>: {
-        // define paths to tools 
+        // define paths to tools or scripts
     }
     
     tools<windows>: {
-        // ..
+        // define different ones for windows
     }
     
     mac-profile:
@@ -286,7 +286,7 @@ Run your own tools or scripts and feed them files with the `files` objects as de
 
 You can use export.jsn files in data directories to specify per directory or per file command line arguments to run. For example when converting textures we may want certain textures to be converted to a different format to others. export.jsn files override each other hierarchically by directory so you can have a single export.jsn at the root of a directory tree.
 
-```
+```yaml
 {
     texturec:
     {
@@ -521,7 +521,7 @@ A file `credentials.unlocked.jsn` will be generated in the current working direc
 
 Tasks can be tasked as explicit so that you must specify `-<task_name>` from the commandline and they do not get included automatically with `-all`. This is useful if you have build tasks which you may only need to run infrequently and take a long time to complete. Building thirdpaty libs which are unpated infreqently is an example of this:
 
-```
+```yaml
 libs: {
     type: shell
         explicit: true
