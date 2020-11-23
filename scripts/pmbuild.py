@@ -654,14 +654,6 @@ def make_for_toolchain(jsn_config, file, options):
     }
     target_option = target_options[toolchain]
 
-    configs = {
-        "make": "config=",
-        "emmake": "config=",
-        "xcodebuild": "-configuration ",
-        "msbuild": "/p:Configuration="
-    }
-    config = ""
-
     # parse other options
     extra_args = ""
     for option in options[1:]:
@@ -669,7 +661,11 @@ def make_for_toolchain(jsn_config, file, options):
         extra_args += option + " "
 
     # build final cli command
-    cmdline = cmd + " " + target_option + " " + file + " " + config + " " + extra_args
+    if "workspace" in make_config.keys():
+        cmdline = cmd + " -workspace pmtech_examples_osx.xcworkspace" + " -scheme " + file + " " + extra_args
+    else:
+        cmdline = cmd + " " + target_option + " " + file + " " + extra_args
+
     return cmdline
 
 
