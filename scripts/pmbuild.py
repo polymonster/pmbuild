@@ -750,6 +750,7 @@ def launch(config, files, options):
             p = subprocess.Popen(cmd, shell=True)
             e = p.wait()
             if e != 0:
+                print("error" + t[2] + " exited with code: " + str(e))
                 exit(1)
         os.chdir(cwd)
 
