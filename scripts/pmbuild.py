@@ -273,7 +273,6 @@ def configure_user(config, args):
             locate_vs_latest(config_user["user_vars"])
             configure_vc_vars_all(config_user["user_vars"])
             configure_windows_sdk(config_user["user_vars"])
-            print(config_user["user_vars"])
     if os.path.exists("config.user.jsn"):
         config_user = jsn.loads(open("config.user.jsn", "r").read())
         util.merge_dicts(config, config_user)
@@ -749,8 +748,8 @@ def launch(config, files, options):
                 cmd += " " + o
             p = subprocess.Popen(cmd, shell=True)
             e = p.wait()
+            print(t[2] + " exited with code: " + str(e))
             if e != 0:
-                print("error" + t[2] + " exited with code: " + str(e))
                 exit(1)
         os.chdir(cwd)
 
