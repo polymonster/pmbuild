@@ -861,6 +861,9 @@ def main():
         config = config_all[sys.argv[profile_pos]]
         # load config user for user specific values (sdk version, vcvarsall.bat etc.)
         configure_user(config, sys.argv)
+        # inserts profile
+        if "user_vars" not in config.keys():
+            config["user_vars"] = dict()
         config["user_vars"]["profile"] = sys.argv[profile_pos]
     else:
         config = config_all["base"]
