@@ -12,6 +12,7 @@ import shutil
 import threading
 import webbrowser
 import fnmatch
+import zipfile
 
 import util
 import dependencies
@@ -273,7 +274,6 @@ def configure_user(config, args):
             locate_vs_latest(config_user["user_vars"])
             configure_vc_vars_all(config_user["user_vars"])
             configure_windows_sdk(config_user["user_vars"])
-            print(config_user["user_vars"])
     if os.path.exists("config.user.jsn"):
         config_user = jsn.loads(open("config.user.jsn", "r").read())
         util.merge_dicts(config, config_user)
@@ -325,6 +325,18 @@ def copy(config, task_name, files):
 def move(config, task_name, files):
     for file in files:
         shutil.move(file[0], file[1])
+
+
+# zips files into a destination folder, only updating if newer
+def zip(config, task_name, files):
+    for file in files:
+        src = file[0]
+        dst = file[1]
+        zp = dst.find(".zip")
+        dst = dst[:zp + 4]
+        with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zip:
+            print("zip:" + src + " to " + dst)
+            zip.write(src, dst)
 
 
 # deletes files and directories specified in files
@@ -749,9 +761,29 @@ def launch(config, files, options):
                 cmd += " " + o
             p = subprocess.Popen(cmd, shell=True)
             e = p.wait()
+            print(t[2] + " exited with code: " + str(e))
             if e != 0:
                 exit(1)
         os.chdir(cwd)
+
+
+# generates metadata json to put in data root dir, for doing hot loading and other re-build tasks
+def generate_pmbuild_config(config, profile):
+    if "data_dir" not in config:
+        print("[error]: did not generate pmbuild_config.json for live reloading")
+        return
+    wd = os.getcwd()
+    pmd = util.sanitize_file_path(config["env"]["pmtech_dir"])
+    md = {
+        "profile": profile,
+        "pmtech_dir": pmd,
+        "pmbuild": "cd " + wd + " && " + pmd + "pmbuild " + profile + " "
+    }
+    util.create_dir(config["data_dir"])
+    np = os.path.join(config["data_dir"], "pmbuild_config.json")
+    np = os.path.normpath(np)
+    f = open(np, "w+")
+    f.write(json.dumps(md, indent=4))
 
 
 # top level help
@@ -857,7 +889,8 @@ def main():
         "connect": connect,
         "make": make,
         "launch": launch,
-        "shell": shell
+        "shell": shell,
+        "zip": zip
     }
 
     if sys.argv[1] == "make":
