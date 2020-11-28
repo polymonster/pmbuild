@@ -776,7 +776,7 @@ def generate_pmbuild_config(config, taskname):
     md = {
         "profile": profile,
         "pmbuild_cmd": pmbuild_config["pmbuild_cmd"],
-        "pmbuild": "cd " + wd + " && " + pmbuild_config["pmbuild_cmd"] + profile + " "
+        "pmbuild": "cd " + wd + " && " + pmbuild_config["pmbuild_cmd"] + " " + profile + " "
     }
     util.create_dir(dd)
     np = os.path.join(dd, "pmbuild_config.json")
