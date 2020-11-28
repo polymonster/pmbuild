@@ -768,19 +768,18 @@ def launch(config, files, options):
 
 
 # generates metadata json to put in data root dir, for doing hot loading and other re-build tasks
-def generate_pmbuild_config(config, profile):
-    if "data_dir" not in config:
-        print("[error]: did not generate pmbuild_config.json for live reloading")
-        return
+def generate_pmbuild_config(config, taskname):
+    pmbuild_config = config[taskname]
     wd = os.getcwd()
-    pmd = util.sanitize_file_path(config["env"]["pmtech_dir"])
+    dd = pmbuild_config["destination"]
+    profile = config["user_vars"]["profile"]
     md = {
         "profile": profile,
-        "pmtech_dir": pmd,
-        "pmbuild": "cd " + wd + " && " + pmd + "pmbuild " + profile + " "
+        "pmbuild_cmd": pmbuild_config["pmbuild_cmd"],
+        "pmbuild": "cd " + wd + " && " + pmbuild_config["pmbuild_cmd"] + profile + " "
     }
-    util.create_dir(config["data_dir"])
-    np = os.path.join(config["data_dir"], "pmbuild_config.json")
+    util.create_dir(dd)
+    np = os.path.join(dd, "pmbuild_config.json")
     np = os.path.normpath(np)
     f = open(np, "w+")
     f.write(json.dumps(md, indent=4))
@@ -862,6 +861,7 @@ def main():
         config = config_all[sys.argv[profile_pos]]
         # load config user for user specific values (sdk version, vcvarsall.bat etc.)
         configure_user(config, sys.argv)
+        config["user_vars"]["profile"] = sys.argv[profile_pos]
     else:
         config = config_all["base"]
 
@@ -890,7 +890,8 @@ def main():
         "make": make,
         "launch": launch,
         "shell": shell,
-        "zip": zip
+        "zip": zip,
+        "pmbuild_config": generate_pmbuild_config
     }
 
     if sys.argv[1] == "make":
