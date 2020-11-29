@@ -215,6 +215,16 @@ def locate_msbulild():
     return None
 
 
+# gets location of msbuild to invoke
+def get_msbuild():
+    msbuild = locate_msbulild()
+    if not msbuild:
+        msbuild = "msbuild"
+    else:
+        msbuild = cgu.in_quotes(msbuild)
+    return msbuild
+
+
 # windows only, configure vcvarsall directory for commandline vc compilation
 def configure_vc_vars_all(config):
     # already exists
@@ -626,6 +636,16 @@ def run_tool(config, task_name, tool, files):
             dependencies.write_to_file_single(d, file[1])
 
 
+# displays help for generic tool
+def run_tool_help(config, task_name, tool):
+    tools_help = config["tools_help"]
+    exe = util.sanitize_file_path(config["tools"][tool])
+    if tool in tools_help.keys():
+        tool_help = tools_help[tool]
+        p = subprocess.Popen(exe + " " + tool_help["help_arg"], shell=True)
+        e = p.wait()
+
+
 # runs shell commands in the current environment
 def shell(config, task_name):
     commands = config[task_name]["commands"]
@@ -641,14 +661,8 @@ def make_for_toolchain(jsn_config, file, options):
     make_config = jsn_config["make"]
     toolchain = make_config["toolchain"]
 
-    # get msbuild location
-    msbuild = ""
     if toolchain == "msbuild":
-        msbuild = locate_msbulild()
-        if not msbuild:
-            msbuild = "msbuild"
-        else:
-            msbuild = cgu.in_quotes(msbuild)
+        msbuild = get_msbuild()
 
     cmds = {
         "make": "make",
@@ -681,16 +695,35 @@ def make_for_toolchain(jsn_config, file, options):
     return cmdline
 
 
+# runs the help for the configured make toolchain
+def help_for_make_toolchain(config, toolchain):
+    msbuild = ""
+    if toolchain == "msbuild":
+        msbuild = get_msbuild()
+    cmd = {
+        "make": "make --help",
+        "emmake": "emmake make --help",
+        "xcodebuild": "xcodebuild -help",
+        "msbuild": msbuild
+    }
+    p = subprocess.Popen(cmd[toolchain], shell=True)
+    e = p.wait()
+
+
 # runs make, and compiles from makefiles, vs solution or xcode project.
 def make(config, files, options):
     cwd = os.getcwd()
     if "make" not in config.keys():
         print("[error] make config missing from config.jsn ")
         return
+    toolchain = config["make"]["toolchain"]
+    if "-help" in config["special_args"]:
+        help_for_make_toolchain(config, toolchain)
+        exit(0)
     if len(options) == 0:
         print("[error] no make target specified")
         return
-    if config["make"]["toolchain"] == "msbuild":
+    if toolchain == "msbuild":
         setup_env = setup_vcvars(config)
         subprocess.call(setup_env, shell=True)
     for file in files:
@@ -789,15 +822,47 @@ def generate_pmbuild_config(config, taskname):
 def pmbuild_help(config):
     util.print_header("pmbuild version 4.0 -help ")
     print("\nusage: pmbuild <profile> <tasks...>")
+    print("       pmbuild make <target>")
+    print("       pmbuild launch <target>")
     print("\noptions:")
     print("    -help (display this dialog).")
-    print("    -<task> -help (display task help).")
+    print("    <profile> -help (display help for the chosen profile).")
+    print("    <profile> <tasks...> -help (display help for the chosen tasks).")
     print("    -cfg (print jsn config for current profile).")
     print("    -verbose (print more).")
+    print("    -all (build all tasks).")
+    print("    -<task> -<task> (build specified tasks).")
+    print("    -n<task> (exclude specified tasks).")
     print("\nprofiles:")
     print("    config.jsn (edit task settings in here)")
     for p in config.keys():
         print(" " * 8 + p)
+
+
+# profile help
+def pmbuild_profile_help(config):
+    util.print_header("pmbuild version 4.0 -profile help ")
+    print("\navailable tasks for profile " + config["user_vars"]["profile"] + ":")
+    print("    config.jsn (edit task settings or add new ones in here)")
+    for task in config.keys():
+        print(" " * 8 + task)
+
+
+# build hekp for core tasks
+def core_help(config, taskname, task_type):
+    if task_type == "copy" or task_type == "move":
+        print("spcify pairs of files or directories for copying/moving [src/input, dst/output]\n")
+        print("files:[")
+        print("    [files/in/directory, copy/to/directory]")
+        print("    [files/with/glob/**/*.txt, copy/to/directory]")
+        print("]")
+        print("exclude files\n")
+        print("excludes:[")
+        print("    *.DS_Store")
+        print("]")
+    else:
+        print("no help available for this tool.")
+        return
 
 
 # main function
@@ -828,14 +893,25 @@ def main():
         "-all"
     ]
 
+    # switch between different modes
+    build_mode = "pmbuild (v4)"
+    profile_pos = 1
+    if sys.argv[1] == "make" or sys.argv[1] == "launch":
+        build_mode = "pmbuild " + sys.argv[1]
+        profile_pos = 2
+
+    # add implicit all
+    implicit_all = False
+    if len(sys.argv) == 2 and profile_pos == 1:
+        implicit_all = True
+
     for arg in reversed(special_args):
         if arg not in sys.argv:
             special_args.remove(arg)
         else:
             sys.argv.remove(arg)
 
-    # add implicit all
-    if len(sys.argv) == 2:
+    if implicit_all:
         special_args.append("-all")
 
     # special modes
@@ -843,30 +919,28 @@ def main():
         edit_credentials()
         return
 
-    # switch between help and run mode
-    call = "run"
-    if "-help" in special_args:
-        pmbuild_help(config_all)
-        exit(0)
-
-    profile_pos = 1
-    if sys.argv[1] == "make" or sys.argv[1] == "launch":
-        profile_pos = 2
+    util.print_header(build_mode)
         
     # first arg is build profile, load profile and merge the config for platform
-    if call == "run":
+    if profile_pos < len(sys.argv):
         if sys.argv[profile_pos] not in config_all:
             print("[error] " + sys.argv[profile_pos] + " is not a valid pmbuild profile")
             exit(0)
         config = config_all[sys.argv[profile_pos]]
-        # load config user for user specific values (sdk version, vcvarsall.bat etc.)
-        configure_user(config, sys.argv)
-        # inserts profile
-        if "user_vars" not in config.keys():
-            config["user_vars"] = dict()
-        config["user_vars"]["profile"] = sys.argv[profile_pos]
     else:
-        config = config_all["base"]
+        config = config_all
+
+    # print pmbuild top level help
+    if "-help" in special_args and len(sys.argv) == 1:
+        pmbuild_help(config_all)
+        exit(0)
+
+    # load config user for user specific values (sdk version, vcvarsall.bat etc.)
+    configure_user(config, sys.argv)
+    # inserts profile
+    if "user_vars" not in config.keys():
+        config["user_vars"] = dict()
+    config["user_vars"]["profile"] = sys.argv[profile_pos]
 
     # inject task keys, to allow alias jobs and multiple runs of the same thing
     for task_name in config.keys():
@@ -880,10 +954,13 @@ def main():
     config["tools"] = dict()
     if "tools" in config_all.keys():
         config["tools"] = config_all["tools"]
-        if "-cfg" in special_args:
-            print(sys.argv)
-            print(special_args)
-            print(json.dumps(config, indent=4))
+    config["tools_help"] = dict()
+    if "tools_help" in config_all.keys():
+        config["tools_help"] = config_all["tools_help"]
+    if "-cfg" in special_args:
+        print(sys.argv)
+        print(special_args)
+        print(json.dumps(config, indent=4))
 
     # core scripts
     scripts = {
@@ -942,6 +1019,11 @@ def main():
             if "-" + task_name in sys.argv or "-all" in special_args:
                 runnable.append(task_name)
 
+        # profile pmbuild help
+        if "-help" in special_args and len(runnable) == 0:
+            pmbuild_profile_help(config)
+            exit(0)
+
         # run tasks
         for task_name in runnable:
             task = config[task_name]
@@ -952,11 +1034,17 @@ def main():
             util.print_header(task_name)
             task_type = task["type"]
             if task_type in config["tools"].keys():
+                if "-help" in special_args:
+                    run_tool_help(config, task_name, task_type)
+                    continue
                 if "files" in task.keys():
                     run_tool(config, task_name, task_type, get_task_files(config, task_name))
                 else:
                     run_tool(config, task_name, task_type, [("", "")])
             elif task_type in scripts.keys():
+                if "-help" in special_args:
+                    core_help(config, task_name, task_type)
+                    continue
                 if "files" in task.keys():
                     scripts.get(task_type)(config, task_name, get_task_files(config, task_name))
                 else:
@@ -968,5 +1056,4 @@ def main():
 
 # entry point of pmbuild
 if __name__ == "__main__":
-    util.print_header("pmbuild (v4)")
     main()
