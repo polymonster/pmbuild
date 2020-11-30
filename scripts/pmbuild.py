@@ -720,12 +720,12 @@ def make(config, files, options):
     if "-help" in config["special_args"]:
         help_for_make_toolchain(config, toolchain)
         exit(0)
-    if len(options) == 0:
-        print("[error] no make target specified")
-        return
     if toolchain == "msbuild":
         setup_env = setup_vcvars(config)
         subprocess.call(setup_env, shell=True)
+    if len(files) == 0:
+        print("[error] no make target specified")
+        return
     for file in files:
         if options[0] == "all":
             pass
@@ -835,12 +835,21 @@ def pmbuild_help(config):
     print("    -n<task> (exclude specified tasks).")
     print("\nprofiles:")
     print("    config.jsn (edit task settings in here)")
+    non_profiles = [
+        "tools",
+        "tools_help"
+        "extensions",
+        "user_vars",
+        "special_args"
+    ]
     for p in config.keys():
-        print(" " * 8 + p)
+        if p not in non_profiles:
+            print(" " * 8 + p)
 
 
 # profile help
 def pmbuild_profile_help(config):
+    util.print_header("pmbuild version 4.0 -profile help ")
     util.print_header("pmbuild version 4.0 -profile help ")
     print("\navailable tasks for profile " + config["user_vars"]["profile"] + ":")
     print("    config.jsn (edit task settings or add new ones in here)")
