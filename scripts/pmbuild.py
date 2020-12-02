@@ -661,6 +661,7 @@ def make_for_toolchain(jsn_config, file, options):
     make_config = jsn_config["make"]
     toolchain = make_config["toolchain"]
 
+    msbuild = ""
     if toolchain == "msbuild":
         msbuild = get_msbuild()
 
