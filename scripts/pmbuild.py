@@ -634,6 +634,9 @@ def run_tool(config, task_name, tool, files):
         e = p.wait()
         if e == 0 and deps:
             dependencies.write_to_file_single(d, file[1])
+        if e != 0:
+            print("[error] processing file " + file[0])
+            exit(e)
 
 
 # displays help for generic tool
@@ -643,7 +646,7 @@ def run_tool_help(config, task_name, tool):
     if tool in tools_help.keys():
         tool_help = tools_help[tool]
         p = subprocess.Popen(exe + " " + tool_help["help_arg"], shell=True)
-        e = p.wait()
+        p.wait()
 
 
 # runs shell commands in the current environment
@@ -782,6 +785,9 @@ def launch(config, files, options):
         tn = os.path.splitext(bn)[0]
         if options[0] == "all" or options[0] == tn:
             targets.append((os.path.dirname(file), os.path.basename(file), tn))
+    if len(targets) == 0:
+        print("[error] no run targets found for " + str(options))
+        return
     # switch to bin dir
     for t in targets:
         os.chdir(t[0])
