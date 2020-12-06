@@ -727,7 +727,7 @@ def make(config, files, options):
     if toolchain == "msbuild":
         setup_env = setup_vcvars(config)
         subprocess.call(setup_env, shell=True)
-    if len(files) == 0:
+    if len(files) == 0 or len(options) <= 0:
         print("[error] no make target specified")
         return
     for file in files:
@@ -829,11 +829,12 @@ def generate_pmbuild_config(config, taskname):
 def pmbuild_help(config):
     util.print_header("pmbuild version 4.0 -help ")
     print("\nusage: pmbuild <profile> <tasks...>")
-    print("       pmbuild make <target>")
-    print("       pmbuild launch <target>")
+    print("       pmbuild make <target> <args...>")
+    print("       pmbuild launch <target> <args...>")
     print("\noptions:")
     print("    -help (display this dialog).")
-    print("    <profile> -help (display help for the chosen profile).")
+    print("        <profile> -help (display help for the chosen profile).")
+    print("        make <profile> -help (display help for the chosen make toolchain).")
     print("    <profile> <tasks...> -help (display help for the chosen tasks).")
     print("    -cfg (print jsn config for current profile).")
     print("    -verbose (print more).")
@@ -948,6 +949,9 @@ def main():
 
     # print pmbuild top level help
     if "-help" in special_args and len(sys.argv) == 1:
+        pmbuild_help(config_all)
+        exit(0)
+    elif "-help" in special_args and len(sys.argv) == 2 and ("make" in sys.argv or "launch" in sys.argv):
         pmbuild_help(config_all)
         exit(0)
 
