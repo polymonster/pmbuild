@@ -339,14 +339,21 @@ def move(config, task_name, files):
 
 # zips files into a destination folder, only updating if newer
 def zip(config, task_name, files):
+    unique_zips = dict()
     for file in files:
         src = file[0]
         dst = file[1]
         zp = dst.find(".zip")
         dst = dst[:zp + 4]
+        if dst not in unique_zips.keys():
+            unique_zips[dst] = list()
+        unique_zips[dst].append(src)
+    for dst in unique_zips.keys():
+        dir = os.path.splitext(os.path.basename(dst))[0]
         with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zip:
-            print("zip:" + src + " to " + dst)
-            zip.write(src, dst)
+            for file in unique_zips[dst]:
+                print("zip " + file)
+                zip.write(file, os.path.join(dir, file))
 
 
 # deletes files and directories specified in files
