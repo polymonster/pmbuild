@@ -349,11 +349,13 @@ def zip(config, task_name, files):
             unique_zips[dst] = list()
         unique_zips[dst].append(src)
     for dst in unique_zips.keys():
-        dir = os.path.splitext(os.path.basename(dst))[0]
+        zloc = os.path.splitext(os.path.basename(dst))[0]
+        dir = os.path.dirname(dst)
+        util.create_dir(dir)
         with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zip:
             for file in unique_zips[dst]:
                 print("zip " + file)
-                zip.write(file, os.path.join(dir, file))
+                zip.write(file, os.path.join(zloc, file))
 
 
 # deletes files and directories specified in files
