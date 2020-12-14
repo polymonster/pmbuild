@@ -460,7 +460,7 @@ def filter_files(config, task_name, files):
                         dest_file = os.path.join(dest_dir, bn + dest_ext)
                         lookups.pop(fp)
                     files += fp + "\n"
-                container_file = en.replace("export.jsn", bn + ".txt")
+                container_file = en.replace("export.jsn", bn + ".container.txt")
                 current_files = ""
                 newest = 0
                 for f in filtered_files:
