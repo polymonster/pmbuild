@@ -91,17 +91,24 @@ Configs are written in [jsn](https;//github.com/polymonster/jsn). Define build t
 }
 ```
 
-# Display Available Profiles
+# Help / Display Available Profiles
 
 ```
 pmbuild -help
 usage: pmbuild <profile> <tasks...>
+       pmbuild make <target> <args...>
+       pmbuild launch <target> <args...>
 
 options:
     -help (display this dialog).
-    -<task> -help (display task help).
+        <profile> -help (display help for the chosen profile).
+        make <profile> -help (display help for the chosen make toolchain).
+    <profile> <tasks...> -help (display help for the chosen tasks).
     -cfg (print jsn config for current profile).
     -verbose (print more).
+    -all (build all tasks).
+    -<task> -<task> (build specified tasks).
+    -n<task> (exclude specified tasks).
 
 profiles:
     config.jsn (edit task settings in here)
@@ -112,12 +119,13 @@ profiles:
         win32-vulkan
         win32-gl
         ios
+        ios-ci
         linux
         linux-vulkan
         web
         android
         extensions
-        tools
+        tools_help
 ```
 
 # Display Available Tasks For Profile
@@ -127,14 +135,14 @@ pmbuild <profile> -help
 available tasks for profile mac:
     config.jsn (edit task settings or add new ones in here)
     build order:
-        shell
-        connect_server
-        texturec
+        premake
         pmfx
-        copy-base
-        copy-wildcards
-        copy-regex
-        jsn
+        shared_libs
+        render_configs
+        base_copy
+        texturec
+        models
+        pmbuild_config
 ```
 
 
