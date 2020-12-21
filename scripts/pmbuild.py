@@ -660,12 +660,19 @@ def run_tool_help(config, task_name, tool):
 
 # runs shell commands in the current environment
 def shell(config, task_name):
+    if "commands" not in config[task_name]:
+        print("[error] shell must specify array of commands:[...]")
+        exit(1)
     commands = config[task_name]["commands"]
     if type(commands) != list:
         print("[error] shell must be array of strings")
+        exit(1)
     for cmd in commands:
         p = subprocess.Popen(cmd, shell=True)
-        p.wait()
+        e = p.wait()
+        if e:
+            print("[error] running " + cmd)
+            exit(1)
 
 
 # generate a cli command for building with different toolchains (make, gcc/clang, xcodebuild, msbuild)
@@ -728,7 +735,7 @@ def make(config, files, options):
     cwd = os.getcwd()
     if "make" not in config.keys():
         print("[error] make config missing from config.jsn ")
-        return
+        exit(1)
     toolchain = config["make"]["toolchain"]
     if "-help" in config["special_args"]:
         help_for_make_toolchain(config, toolchain)
@@ -738,12 +745,19 @@ def make(config, files, options):
         subprocess.call(setup_env, shell=True)
     if len(files) == 0 or len(options) <= 0:
         print("[error] no make target specified")
-        return
+        exit(1)
+    # filter build files
+    build_files = []
     for file in files:
         if options[0] == "all":
             pass
         elif options[0] != os.path.splitext(os.path.basename(file[0]))[0]:
             continue
+        build_files.append(file)
+    if len(build_files) <= 0:
+        print("[error] no make target found for " + str(options))
+        exit(1)
+    for file in build_files:
         os.chdir(os.path.dirname(file[0]))
         proj = os.path.basename(file[0])
         cmd = make_for_toolchain(config, proj, options)
@@ -782,11 +796,11 @@ def launch(config, files, options):
     cwd = os.getcwd()
     if "launch" not in config.keys():
         print("[error] run config missing from config.jsn ")
-        return
+        exit(1)
     run_config = config["launch"]
     if len(options) == 0:
         print("[error] no run target specified")
-        return
+        exit(1)
     targets = []
     for file in files:
         file = file[0]
@@ -796,7 +810,7 @@ def launch(config, files, options):
             targets.append((os.path.dirname(file), os.path.basename(file), tn))
     if len(targets) == 0:
         print("[error] no run targets found for " + str(options))
-        return
+        exit(1)
     # switch to bin dir
     for t in targets:
         os.chdir(t[0])
@@ -865,12 +879,12 @@ def pmbuild_help(config):
 
 
 # profile help
-def pmbuild_profile_help(config):
-    util.print_header("pmbuild version 4.0 -profile help ")
+def pmbuild_profile_help(config, build_order):
     util.print_header("pmbuild version 4.0 -profile help ")
     print("\navailable tasks for profile " + config["user_vars"]["profile"] + ":")
     print("    config.jsn (edit task settings or add new ones in here)")
-    for task in config.keys():
+    print("    build order:")
+    for task in build_order:
         print(" " * 8 + task)
 
 
@@ -889,6 +903,51 @@ def core_help(config, taskname, task_type):
     else:
         print("no help available for this tool.")
         return
+
+
+# parses commandline args and config settings to generate a list of filtered tasks in order of execution
+def generate_build_order(config, config_all, all):
+    # filter tasks
+    runnable = []
+    for task_name in config.keys():
+        task = config[task_name]
+        if type(task) != dict:
+            continue
+        non_tasks = ["clean", "make", "launch", "user_vars"]
+        if "type" not in task:
+            continue
+        if task["type"] in non_tasks:
+            continue
+        if "explicit" in task.keys():
+            if task["explicit"] and "-" + task_name not in sys.argv:
+                continue
+        if "-n" + task_name in sys.argv:
+            continue
+        if "-" + task_name in sys.argv or "-" + task["type"] in sys.argv or all:
+            runnable.append(task_name)
+
+
+    # sort
+    buckets = {
+        "pre_build_order": [],
+        "build_order": [],
+        "post_build_order": []
+    }
+    orderer_tasks = []
+    for key in buckets.keys():
+        if key in config_all.keys():
+            for i in config_all[key]:
+                if i in runnable:
+                    buckets[key].append(i)
+                    orderer_tasks.append(i)
+    for task in runnable:
+        if task not in orderer_tasks:
+            buckets["build_order"].append(task)
+    runnable_ordered = []
+    for key in buckets.keys():
+        for i in buckets[key]:
+            runnable_ordered.append(i)
+    return runnable_ordered
 
 
 # main function
@@ -1029,32 +1088,16 @@ def main():
                     util.print_header(task_name)
                     clean(config, task_name)
 
-        # filter tasks
-        runnable = []
-        for task_name in config.keys():
-            task = config[task_name]
-            if type(task) != dict:
-                continue
-            non_tasks = ["clean", "make", "launch", "user_vars"]
-            if "type" not in task:
-                continue
-            if task["type"] in non_tasks:
-                continue
-            if "explicit" in task.keys():
-                if task["explicit"] and "-" + task_name not in sys.argv:
-                    continue
-            if "-n" + task_name in sys.argv:
-                continue
-            if "-" + task_name in sys.argv or "-all" in special_args:
-                runnable.append(task_name)
+        runnable_ordered = generate_build_order(config, config_all, "-all" in special_args)
 
         # profile pmbuild help
-        if "-help" in special_args and len(runnable) == 0:
-            pmbuild_profile_help(config)
+        if "-help" in special_args and len(runnable_ordered) == 0:
+            runnable_ordered = generate_build_order(config, config_all, all)
+            pmbuild_profile_help(config, runnable_ordered)
             exit(0)
 
         # run tasks
-        for task_name in runnable:
+        for task_name in runnable_ordered:
             task = config[task_name]
             if "type" not in task:
                 continue
