@@ -339,14 +339,23 @@ def move(config, task_name, files):
 
 # zips files into a destination folder, only updating if newer
 def zip(config, task_name, files):
+    unique_zips = dict()
     for file in files:
         src = file[0]
         dst = file[1]
         zp = dst.find(".zip")
         dst = dst[:zp + 4]
+        if dst not in unique_zips.keys():
+            unique_zips[dst] = list()
+        unique_zips[dst].append(src)
+    for dst in unique_zips.keys():
+        zloc = os.path.splitext(os.path.basename(dst))[0]
+        dir = os.path.dirname(dst)
+        util.create_dir(dir)
         with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zip:
-            print("zip:" + src + " to " + dst)
-            zip.write(src, dst)
+            for file in unique_zips[dst]:
+                print("zip " + file)
+                zip.write(file, os.path.join(zloc, file))
 
 
 # deletes files and directories specified in files
@@ -451,7 +460,7 @@ def filter_files(config, task_name, files):
                         dest_file = os.path.join(dest_dir, bn + dest_ext)
                         lookups.pop(fp)
                     files += fp + "\n"
-                container_file = en.replace("export.jsn", bn + ".txt")
+                container_file = en.replace("export.jsn", bn + ".container.txt")
                 current_files = ""
                 newest = 0
                 for f in filtered_files:
