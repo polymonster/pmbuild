@@ -958,7 +958,7 @@ def main():
 
     # must have config.json in working directory
     if not os.path.exists(config_file):
-        print("[error] no config.json in current directory.")
+        print("[error] no config.jsn in current directory.")
         exit(1)
 
     # load jsn, inherit etc
