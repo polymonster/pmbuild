@@ -107,7 +107,7 @@ options:
     -cfg (print jsn config for current profile).
     -verbose (print more).
     -all (build all tasks).
-    -<task> -<task> (build specified tasks).
+    -<task> (build specified tasks by name or by type).
     -n<task> (exclude specified tasks).
 
 profiles:
