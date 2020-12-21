@@ -1,6 +1,6 @@
 # pmbuild
 
-A code and data build system for game development, it can be used to orchestrate multi platform build piplines to transform source assets (textures, shaders, models) into game ready formats, build code, deploy packages and run tests. pmbuild provides a frame work to add build tasks and integrate your own tools and helps reduce the amount of 'glue' code required to run various build steps.
+A code and data build system for game development, it can be used to orchestrate multi platform build piplines to transform source assets (textures, shaders, models) into game ready formats, build code, deploy packages and run tests. pmbuild provides a framework to add new build tasks, integrate your own tools and reduce the amount of 'glue' code required to run various build steps.
 
 It is designed to be run locally to deploy to devkits or build code to run tests from the commandline but you can also use pmbuild in CI services to reduce the amount of code required in your CI system and so that local users have the same system to build and test with.
 
@@ -21,6 +21,7 @@ It is not a replacement for msbuild, xcodebuild, premake or cmake and so forth, 
 - copy
 - clean
 - connect (smb connections with credentials)
+- zip
 - premake (generate visual studio solutions, xcode workspace, makefiles, android studio projects)
 - texturec (compress textures, generate mip maps, resize, etc...)
 - pmfx (generate hlsl, glsl, metal or spir-v from pmfx shader source)
@@ -28,7 +29,7 @@ It is not a replacement for msbuild, xcodebuild, premake or cmake and so forth, 
 
 ### Extendible
 
-Bring your own tools and build scripts and hook them into pmbuild.
+Bring your own tools and build scripts and hook them into pmbuild and add custom python modules to call from pmbuild.
 
 # Usage
 
@@ -55,7 +56,7 @@ pmbuild <profile>
 pmbuild <profile> -all
 ```
 
-You can run a single task or a selection of task by passing the task name, or you can supply `-n<task_name>` to exclude a task:
+You can run a single task or a selection of tasks by passing the task name, or you can supply `-n<task_name>` to exclude a task:
 
 ```
 # runs 2 tasks
@@ -65,9 +66,9 @@ pmbuild mac -premake -texturec
 pmbuild mac -all -ncopy
 ```
 
-# config.jsn
+# Config Files
 
-Configs are written in [https;//github.com/polymonster/jsn](jsn). Define build tasks in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
+Configs are written in [jsn](https;//github.com/polymonster/jsn). Define build tasks in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
 
 ```yaml
 {
@@ -79,7 +80,7 @@ Configs are written in [https;//github.com/polymonster/jsn](jsn). Define build t
         // define different ones for windows
     }
     
-    mac-profile:
+    mac:
     {
         // mac profile builds tasks for mac platform
         // ..
@@ -119,6 +120,24 @@ profiles:
         tools
 ```
 
+# Display Available Tasks For Profile
+
+```
+pmbuild <profile> -help
+available tasks for profile mac:
+    config.jsn (edit task settings or add new ones in here)
+    build order:
+        shell
+        connect_server
+        texturec
+        pmfx
+        copy-base
+        copy-wildcards
+        copy-regex
+        jsn
+```
+
+
 # Variables and Inheritence
 
 jsn allows inheritence and variables `${variable}` evaluated with dollar sign where variables are defined in the script. This allows sharing and re-use of tasks to make configs more compact.
@@ -141,7 +160,7 @@ jsn allows inheritence and variables `${variable}` evaluated with dollar sign wh
 
 # Special Variables
 
-pmbuild also provides some special `%{variables}` evaluated with percentage sign these are evaulated at runtime and some of them are configurable by the user and stored in `config.user.jsn` which you wil prompted for when they are required if they cannot be auto located.
+pmbuild also provides some special `%{variables}` evaluated with percentage sign these are evaulated at runtime and some of them are configurable by the user and stored in `config.user.jsn` pmbuild has some default user variables which you will auto located and configured or you may be prompted to input a value.
 
 ```
 %{vs_latest} = locates the latest installation of visual studio ie (vs2019)
@@ -151,9 +170,11 @@ pmbuild also provides some special `%{variables}` evaluated with percentage sign
 %{teamid}" = apple developer team id
 ```
 
+You can add your own user variables for use in any extension scripts.
+
 # Copy
 
-You can copy files with a copy task, this is often necessary to move files into a data directory or deploy to a dev kit, simply specify an array of file pairs in a task of type copy, you can supply glob or regex to find files:
+You can copy files with a copy task, this is often necessary to move files into a data directory or deploy to a dev kit, simply specify an array of file pairs (source, destination) in a task of type copy. Here you can supply [glob](https://docs.python.org/3/library/glob.html) or [regex](https://docs.python.org/3/library/re.html) to find files:
 
 ```yaml
 // copys from src to dest
@@ -220,7 +241,7 @@ clean: {
 
 # Tools
 
-Run your own tools or scripts and feed them files with the `files` objects as described in the copy task. We can register tools for <mac, windows or linux> which is the system pmbuild is currently running on. We can target other platforms such as PlayStation or Xbox but we still build on a windows machine and for iOS we target the iOS platform but build from macOS:
+Run your own tools or scripts and feed them files with the `files` objects as described in the copy task. We can register tools for <mac, windows or linux> which is the system pmbuild is currently running on. We can target other platforms such as PlayStation or Xbox but we still build on a windows machine and for iOS we target the iOS platform but build from macOS for instance:
 
 
 ```yaml
@@ -282,9 +303,29 @@ Run your own tools or scripts and feed them files with the `files` objects as de
 }
 ```
 
-# export.jsn
+# Extension Python Modules
 
-You can use export.jsn files in data directories to specify per directory or per file command line arguments to run. For example when converting textures we may want certain textures to be converted to a different format to others. export.jsn files override each other hierarchically by directory so you can have a single export.jsn at the root of a directory tree.
+You can register and call extension modules written in python, specify a path to the python module directory, the module name (.py file) and a function name to invoke when the build runs:
+
+```yaml
+extensions: {
+    models: {
+        search_path: "${pmtech_dir}/tools/pmbuild_ext"
+        module: "pmbuild_ext"
+        function: "run_models"
+    }
+    cr:
+    {
+        search_path: "${pmtech_dir}/tools/pmbuild_ext"
+        module: "pmbuild_ext"
+        function: "run_cr"
+    }
+}
+```
+
+# Export Config Files
+
+You can use `export.jsn` files in data directories to specify per directory or per file command line arguments to run. For example when converting textures we may want certain textures to be converted to a different format to others. export.jsn files override each other hierarchically by directory so you can have a single export.jsn at the root of a directory tree.
 
 ```yaml
 {
@@ -328,7 +369,7 @@ You can specify `rules` which select files and apply different settings. jsn inh
 
 # Dependencies
 
-Output dependency info with build timestamps the commandline used to build and lists of input and output files. Dependency info is in json for use in other tools for triggering hot reloading. Add `dependencies: true` to any tool with a `files` object to generate an output `.dep` file for each file that is built, subsequent builds will skip if the dependencies remain up-to-date.
+With builds you can choose to output dependency info containing build and file timestamps, the commandline used to build and a list of input and output files used during a build. Add `dependencies: true` to any tool with a `files` object to generate an output `.dep` file for each file that is built, subsequent builds will skip if the dependencies remain up-to-date. Dependency info is output in json and can be used in other tools as well to trigger hot reloading.
 
 ```yaml
 render_configs: {
@@ -363,7 +404,7 @@ render_configs: {
 
 # Containers
 
-Sometimes in source asset data we may have a collection of files in a directory we want to group together to concatonate or merge them... for instance if we have individual images for cubemap faces and we want to pass them to a tool to spit out a single cubemap texture. Specify container and `files` comprised of an array of filenames or globs, these files will be written into a .txt file you can forward to other tools.
+Sometimes in source asset data we may have a collection of files in a directory we want to group together to concatonate or merge them... for instance if we have individual images for cubemap faces and we want to pass them to a tool to spit out a single cubemap texture. Specify container and `files` comprised of an array of filenames or globs, these files will be written into a `.container.txt` file you can forward to other tools.
 
 ```yaml
 {
@@ -386,26 +427,6 @@ Sometimes in source asset data we may have a collection of files in a directory 
         files: [
             "*.jpg"
         ]
-    }
-}
-```
-
-# Extensions
-
-You can register and call extension modules written in python:
-
-```yaml
-extensions: {
-    models: {
-        search_path: "${pmtech_dir}/tools/pmbuild_ext"
-        module: "pmbuild_ext"
-        function: "run_models"
-    }
-    cr:
-    {
-        search_path: "${pmtech_dir}/tools/pmbuild_ext"
-        module: "pmbuild_ext"
-        function: "run_cr"
     }
 }
 ```
@@ -533,6 +554,28 @@ libs: {
     }
 }
 ```
+
+# Build Order
+
+By default tasks are built in the order they are specified in the config.jsn files. When using jsn inheritence it may not be clear what the build order might be or you may want to specify an explicit build order. You can do this using the `build_order` lists.
+
+```
+pre_build_order: [
+    "first task"
+]
+
+build_order: [
+    "second task"
+    // unspecificed tasks are appended here
+    // ..
+]
+
+post_build_order" [
+    "final task"
+]
+```
+
+Each of the build order lists is optional. If you do not specify a task name in any of the build order lists it will be appended to the `build_order` list.
 
 
 
