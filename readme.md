@@ -548,7 +548,7 @@ A file `credentials.unlocked.jsn` will be generated in the current working direc
 
 # Explicit Tasks
 
-Tasks can be tasked as explicit so that you must specify `-<task_name>` from the commandline and they do not get included automatically with `-all`. This is useful if you have build tasks which you may only need to run infrequently and take a long time to complete. Building thirdpaty libs which are unpated infreqently is an example of this:
+Tasks can be marked as explicit so that you must specify `-<task_name>` from the commandline and they do not get included automatically with `-all`. This is useful if you have build tasks which you may only need to run infrequently and take a long time to complete. Building third party librariess which are updated infreqently is an example where this can be useful:
 
 ```yaml
 libs: {
@@ -584,6 +584,3 @@ post_build_order" [
 ```
 
 Each of the build order lists is optional. If you do not specify a task name in any of the build order lists it will be appended to the `build_order` list.
-
-
-
