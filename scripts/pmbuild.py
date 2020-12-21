@@ -862,7 +862,7 @@ def pmbuild_help(config):
     print("    -cfg (print jsn config for current profile).")
     print("    -verbose (print more).")
     print("    -all (build all tasks).")
-    print("    -<task> -<task> (build specified tasks).")
+    print("    -<task> (build specified tasks by name or by type).")
     print("    -n<task> (exclude specified tasks).")
     print("\nprofiles:")
     print("    config.jsn (edit task settings in here)")
@@ -925,8 +925,6 @@ def generate_build_order(config, config_all, all):
             continue
         if "-" + task_name in sys.argv or "-" + task["type"] in sys.argv or all:
             runnable.append(task_name)
-
-
     # sort
     buckets = {
         "pre_build_order": [],
