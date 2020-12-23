@@ -4,7 +4,7 @@ A code and data build system for game development, it can be used to orchestrate
 
 It is designed to be run locally to deploy to devkits or build code to run tests from the commandline but you can also use pmbuild in CI services to reduce the amount of code required in your CI system and so that local users have the same system to build and test with.
 
-It is not a replacement for msbuild, xcodebuild, premake or cmake and so forth, pmbuild is designed to use other build and pre-build systems and the pmbuild system simply provides tools and infrasturcture to help.
+It is not a replacement for msbuild, xcodebuild, cmake or other tools. pmbuild is designed to use other build and pre-build systems and the pmbuild system simply provides tools and infrasturcture to help.
 
 ### Supported Platforms
 - macOS
