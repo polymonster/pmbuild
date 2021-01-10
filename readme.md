@@ -154,6 +154,12 @@ available tasks for profile mac:
         pmbuild_config
 ```
 
+# Display Help For Task
+
+```
+pmbuild <profile> -<task> -help
+
+```
 
 # Variables and Inheritence
 
