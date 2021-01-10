@@ -6,6 +6,10 @@ It is designed to be run locally to deploy to devkits or build code to run tests
 
 It is not a replacement for msbuild, xcodebuild, cmake or other tools. pmbuild is designed to use other build and pre-build systems and the pmbuild system simply provides tools and infrasturcture to help.
 
+Checkout the live demo [video](https://youtu.be/L-wPJXZ_oDA).
+
+Example working [scripts](https://github.com/polymonster/pmtech/blob/master/examples/config.jsn) can bee seen in my game engine repository [pmtech](https://github.com/polymonster/pmtech).
+
 ### Supported Platforms
 - macOS
 - Windows
