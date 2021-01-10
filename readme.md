@@ -8,7 +8,7 @@ It is not a replacement for msbuild, xcodebuild, cmake or other tools. pmbuild i
 
 Checkout the live demo [video](https://youtu.be/L-wPJXZ_oDA) to see it in action.  
 
-Find examples of working [scripts](https://github.com/polymonster/pmtech/blob/master/examples/config.jsn) can bee seen in my game engine repository [pmtech](https://github.com/polymonster/pmtech).
+Examples of working [scripts](https://github.com/polymonster/pmtech/blob/master/examples/config.jsn) can bee seen in my game engine repository [pmtech](https://github.com/polymonster/pmtech).
 
 ### Supported Platforms
 - macOS
