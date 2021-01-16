@@ -35,12 +35,28 @@ Examples of working [scripts](https://github.com/polymonster/pmtech/blob/master/
 
 Bring your own tools and build scripts and hook them into pmbuild and add custom python modules to call from pmbuild.
 
-### Dependencies
+# Dependencies
 
 - python3 is the only dependency required
 - optional: `pip install cryptography` if you want to use encrypted credentials.
 
+# Cloning
+
+pmbuild requires some submodules so please clone recursively:
+
+```
+git clone https://github.com/polymonster/pmbuild.git --recursive
+```
+
+When submodules update or new ones are added you can update as follows:
+
+```
+git submodule update --init --recursive
+```
+
 # Usage
+
+Add the pmbuild repository directory to your path for convenience so you can simply invoke `pmbuild`, otherwise you can locate pmbuild manually and run `<path_to_pmbuild>/pmbuild`.
 
 pmbuild is a CLI there must be a file called config.jsn in the current working directory, this how you describe your build pipelines. Add the pmbuild root directory to your path for convenience: 
 
@@ -192,11 +208,11 @@ pmbuild also provides some special `%{variables}` evaluated with percentage sign
 %{teamid}" = apple developer team id
 ```
 
-You can add your own user variables for use in any extension scripts.
+You can add your own user variables for use in any extension scripts to `config.user.jsn` in the current working directory.
 
 # Copy
 
-You can copy files with a copy task, this is often necessary to move files into a data directory or deploy to a dev kit, simply specify an array of file pairs (source, destination) in a task of type copy. Here you can supply [glob](https://docs.python.org/3/library/glob.html) or [regex](https://docs.python.org/3/library/re.html) to find files:
+You can copy files with a copy task, this is often necessary to move files into a data directory or deploy to a dev kit, simply specify an array of file pairs (source, destination) in a task of type copy. Here you can supply [glob](https://docs.python.org/3/library/glob.html) or [regex](https://docs.python.org/3/library/re.html) to find files, a directory or a single file:
 
 ```yaml
 // copys from src to dest
@@ -243,6 +259,26 @@ copy-change-ext:
          ["assets/random_files/*.txt", "bin/text_files"]
     ]
     change_ext: ".newext"
+}
+```
+You can also specify `excludes` which is an [fnmatch](https://docs.python.org/3/library/fnmatch.html) to further filter files after they are expanded by directory, regex or glob:
+
+```
+texturec: {
+    args: [
+        "-f %{input_file}"
+        "%{export_args}"
+        "-o %{output_file}"
+    ]
+    files: [
+        ["assets/source/textures", "${data_dir}/textures"]
+    ]
+    excludes: [
+        "export.jsn"
+        "*.txt"
+        "*.DS_Store"
+        "*.dds"
+    ]
 }
 ```
 
