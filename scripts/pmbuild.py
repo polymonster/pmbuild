@@ -161,6 +161,61 @@ def configure_windows_sdk(config):
     return
 
 
+# generates launch and task files for vscode
+def vscode_build(config, task_name, files):
+    vscode_config = config[task_name]
+    tasks = {
+        "version": "2.0.0",
+        "tasks": []
+    }
+    launch = {
+        "version": "0.2.0",
+        "configurations": []
+    }
+    workspace = {
+        "folders": []
+    }
+    relative_path = ".."
+    if "folders" in vscode_config.keys():
+        for folder in vscode_config["folders"]:
+            workspace["folders"].append({"path": os.path.join(relative_path, folder)})
+    workspace["folders"].append({"path": "."})
+    for file in files:
+        for configuration in vscode_config["configurations"]:
+            target_name = os.path.basename(file[0])
+            make_cmd = configuration["make"].replace("%{target_name}", target_name)
+            vscode_config_name = target_name + "_" + configuration["name"]
+            vscode_task_name = "build_" + target_name + "_" + configuration["name"]
+            tasks["tasks"].append({
+                "label": vscode_task_name,
+                "command": make_cmd,
+                "type": "shell"
+            })
+            launch_cmd = configuration["launch"].replace("%{target_name}", target_name)
+            launch["configurations"].append(
+                {
+                    "name": vscode_config_name,
+                    "type": "cppdbg",
+                    "request": "launch",
+                    "program": "${workspaceFolder}/" + launch_cmd,
+                    "args": [],
+                    "stopAtEntry": False,
+                    "preLaunchTask": vscode_task_name,
+                    "cwd": "${workspaceFolder}",
+                    "environment": [],
+                    "externalConsole": False,
+                    "MIMode": "lldb"
+                }
+            )
+    workspace_file = os.path.join(".vscode", "workspace.code-workspace")
+    launch_file = os.path.join(".vscode", "launch.json")
+    tasks_file = os.path.join(".vscode", "tasks.json")
+    util.create_dir(tasks_file)
+    open(launch_file, "w+").write(json.dumps(launch, indent=4))
+    open(tasks_file, "w+").write(json.dumps(tasks, indent=4))
+    open(workspace_file, "w+").write(json.dumps(workspace, indent=4))
+
+
 # find visual studio installation directory
 def locate_vs_root():
     pf_env = ["PROGRAMFILES", "PROGRAMFILES(X86)"]
@@ -1057,7 +1112,8 @@ def main():
         "launch": launch,
         "shell": shell,
         "zip": zip,
-        "pmbuild_config": generate_pmbuild_config
+        "pmbuild_config": generate_pmbuild_config,
+        "vscode": vscode_build
     }
 
     if sys.argv[1] == "make":
