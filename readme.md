@@ -1,6 +1,6 @@
 # pmbuild
 
-A build system for game development, it can be used to orchestrate multi platform build piplines to transform source assets (textures, shaders, models) into game ready formats, build code, deploy packages and run tests. pmbuild provides a framework to add new build tasks, integrate your own tools and reduce the amount of 'glue' code required to run various build steps.
+A build system whth a focus on game development, it can be used to orchestrate multi platform build piplines to transform source assets (textures, shaders, models) into game ready formats, build code, deploy packages and run tests. pmbuild provides a framework to add new build tasks, integrate your own tools and reduce the amount of 'glue' code required to run various build steps.
 
 It is designed to be run locally to deploy to devkits or build code to run tests from the commandline but you can also use pmbuild in CI services to reduce the amount of code required in your CI system and so that local users have the same system to build and test with.
 
@@ -8,7 +8,7 @@ It is not a replacement for msbuild, xcodebuild, cmake or other tools. pmbuild i
 
 Checkout the live demo [video](https://youtu.be/L-wPJXZ_oDA) to see it in action.  
 
-Examples of working [scripts](https://github.com/polymonster/pmtech/blob/master/examples/config.jsn) can bee seen in my game engine repository [pmtech](https://github.com/polymonster/pmtech).
+Examples of working [scripts](https://github.com/polymonster/pmtech/blob/master/examples/config.jsn) can be seen in my game engine repository [pmtech](https://github.com/polymonster/pmtech) from which this project originated.
 
 ### Supported Platforms
 - macOS
@@ -22,14 +22,15 @@ Examples of working [scripts](https://github.com/polymonster/pmtech/blob/master/
 - emmake
 
 ### Built-in Tasks
-- copy
-- clean
-- connect (smb connections with credentials)
-- zip
+- copy (copy files from src to dst with single files, folders, globs or regex)
+- clean (delete intermediate files)
+- connect (smb network connections with credentials)
+- zip (zip or unzip files)
 - premake (generate visual studio solutions, xcode workspace, makefiles, android studio projects)
 - texturec (compress textures, generate mip maps, resize, etc...)
 - pmfx (generate hlsl, glsl, metal or spir-v from pmfx shader source)
 - jsn (make game configs in jsn and convert to json for later use)
+- vscode (generates launch, tasks and workspace for vscode)
 
 ### Extendible
 
@@ -617,7 +618,7 @@ libs: {
 
 By default tasks are built in the order they are specified in the config.jsn files. When using jsn inheritence it may not be clear what the build order might be or you may want to specify an explicit build order. You can do this using the `build_order` lists.
 
-```
+```yaml
 pre_build_order: [
     "first task"
 ]
@@ -634,3 +635,36 @@ post_build_order" [
 ```
 
 Each of the build order lists is optional. If you do not specify a task name in any of the build order lists it will be appended to the `build_order` list.
+
+# vscode
+
+pmbuild can generate `launch.json`, `tasks.json` and `.code-workspace` files for vscode which use pmbuild and a configured make toolchain to build code and launch the exectuable for debugging.
+
+```yaml
+vscode: {
+    // feed files, here we use xcodeproj but you could locate vcxproj or makefiles
+    files: [
+        "build/osx/*.xcodeproj"
+    ]
+    // strip .xcodeproj because we just want the name of the project
+    change_ext: ""
+    // folders relative to pmbuild cwd will be added to the workspace
+    folders: [
+        "."
+        ".."
+    ]
+    // array of configurations with pmbuild make, and a luanch command, %{target_name} is the basename of the xcodeproj or vcxproj
+    configurations:[
+        {
+            name: "debug"
+            make: "../pmbuild make mac %{target_name} -configuration Debug"
+            launch: "bin/osx/%{target_name}_d.app/Contents/MacOS/%{target_name}_d"
+        }
+        {
+            name: "release"
+            make: "../pmbuild make mac %{target_name} -configuration Release"
+            launch: "bin/osx/%{target_name}.app/Contents/MacOS/%{target_name}"
+        }
+    ]
+}
+```
