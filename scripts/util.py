@@ -145,7 +145,7 @@ def open_text_editor(file):
 def print_duration(ts):
     millis = int((time.time() - ts) * 1000)
     print("--------------------------------------------------------------------------------")
-    print("Took (" + str(millis) + "ms)")
+    print("pmbuild: All Jobs Complete (" + str(millis) + "ms)")
 
 
 # prints a header to clearly separate console output and to make build steps quick to find
