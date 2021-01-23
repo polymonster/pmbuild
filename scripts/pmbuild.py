@@ -180,12 +180,15 @@ def vscode_build(config, task_name, files):
         for folder in vscode_config["folders"]:
             workspace["folders"].append({"path": os.path.join(relative_path, folder)})
     workspace["folders"].append({"path": "."})
+    cwd = util.value_with_default("cwd", vscode_config, "")
+    debugger = util.value_with_default("debugger", vscode_config, "lldb")
     for file in files:
         for configuration in vscode_config["configurations"]:
             target_name = os.path.basename(file[0])
             make_cmd = configuration["make"].replace("%{target_name}", target_name)
             vscode_config_name = target_name + "_" + configuration["name"]
             vscode_task_name = "build_" + target_name + "_" + configuration["name"]
+            print("build target: " + vscode_config_name)
             tasks["tasks"].append({
                 "label": vscode_task_name,
                 "command": make_cmd,
@@ -201,10 +204,10 @@ def vscode_build(config, task_name, files):
                     "args": [],
                     "stopAtEntry": False,
                     "preLaunchTask": vscode_task_name,
-                    "cwd": "${workspaceFolder}",
+                    "cwd": "${workspaceFolder}/" + cwd,
                     "environment": [],
                     "externalConsole": False,
-                    "MIMode": "lldb"
+                    "MIMode": debugger
                 }
             )
     workspace_file = os.path.join(".vscode", "workspace.code-workspace")
