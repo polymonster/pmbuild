@@ -618,7 +618,7 @@ libs: {
 
 By default tasks are built in the order they are specified in the config.jsn files. When using jsn inheritence it may not be clear what the build order might be or you may want to specify an explicit build order. You can do this using the `build_order` lists.
 
-```
+```yaml
 pre_build_order: [
     "first task"
 ]
@@ -640,7 +640,7 @@ Each of the build order lists is optional. If you do not specify a task name in 
 
 pmbuild can generate `launch.json`, `tasks.json` and `.code-workspace` files for vscode which use pmbuild and a configured make toolchain to build code and launch the exectuable for debugging.
 
-```
+```yaml
 vscode: {
     // feed files, here we use xcodeproj but you could locate vcxproj or makefiles
     files: [
