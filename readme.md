@@ -22,14 +22,15 @@ Examples of working [scripts](https://github.com/polymonster/pmtech/blob/master/
 - emmake
 
 ### Built-in Tasks
-- copy
-- clean
-- connect (smb connections with credentials)
-- zip
+- copy (copy files from src to dst with single files, folders, globs or regex)
+- clean (delete intermediate files)
+- connect (smb network connections with credentials)
+- zip (zip or unzip files)
 - premake (generate visual studio solutions, xcode workspace, makefiles, android studio projects)
 - texturec (compress textures, generate mip maps, resize, etc...)
 - pmfx (generate hlsl, glsl, metal or spir-v from pmfx shader source)
 - jsn (make game configs in jsn and convert to json for later use)
+- vscode (generates launch, tasks and workspace for vscode)
 
 ### Extendible
 
@@ -634,3 +635,36 @@ post_build_order" [
 ```
 
 Each of the build order lists is optional. If you do not specify a task name in any of the build order lists it will be appended to the `build_order` list.
+
+# vscode
+
+pmbuild can generate `launch.json`, `tasks.json` and `.code-workspace` files for vscode which use pmbuild and a configured make toolchain to build code and launch the exectuable for debugging.
+
+```
+vscode: {
+    // feed files, here we use xcodeproj but you could locate vcxproj or makefiles
+    files: [
+        "build/osx/*.xcodeproj"
+    ]
+    // strip .xcodeproj because we just want the name of the project
+    change_ext: ""
+    // folders relative to pmbuild cwd will be added to the workspace
+    folders: [
+        "."
+        ".."
+    ]
+    // array of configurations with pmbuild make, and a luanch command, %{target_name} is the basename of the xcodeproj or vcxproj
+    configurations:[
+        {
+            name: "debug"
+            make: "../pmbuild make mac %{target_name} -configuration Debug"
+            launch: "bin/osx/%{target_name}_d.app/Contents/MacOS/%{target_name}_d"
+        }
+        {
+            name: "release"
+            make: "../pmbuild make mac %{target_name} -configuration Release"
+            launch: "bin/osx/%{target_name}.app/Contents/MacOS/%{target_name}"
+        }
+    ]
+}
+```
