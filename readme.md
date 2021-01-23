@@ -1,6 +1,6 @@
 # pmbuild
 
-A build system for game development, it can be used to orchestrate multi platform build piplines to transform source assets (textures, shaders, models) into game ready formats, build code, deploy packages and run tests. pmbuild provides a framework to add new build tasks, integrate your own tools and reduce the amount of 'glue' code required to run various build steps.
+A build system whth a focus on game development, it can be used to orchestrate multi platform build piplines to transform source assets (textures, shaders, models) into game ready formats, build code, deploy packages and run tests. pmbuild provides a framework to add new build tasks, integrate your own tools and reduce the amount of 'glue' code required to run various build steps.
 
 It is designed to be run locally to deploy to devkits or build code to run tests from the commandline but you can also use pmbuild in CI services to reduce the amount of code required in your CI system and so that local users have the same system to build and test with.
 
@@ -8,7 +8,7 @@ It is not a replacement for msbuild, xcodebuild, cmake or other tools. pmbuild i
 
 Checkout the live demo [video](https://youtu.be/L-wPJXZ_oDA) to see it in action.  
 
-Examples of working [scripts](https://github.com/polymonster/pmtech/blob/master/examples/config.jsn) can bee seen in my game engine repository [pmtech](https://github.com/polymonster/pmtech).
+Examples of working [scripts](https://github.com/polymonster/pmtech/blob/master/examples/config.jsn) can be seen in my game engine repository [pmtech](https://github.com/polymonster/pmtech) from which this project originated.
 
 ### Supported Platforms
 - macOS
