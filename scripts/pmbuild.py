@@ -180,12 +180,18 @@ def vscode_build(config, task_name, files):
         for folder in vscode_config["folders"]:
             workspace["folders"].append({"path": os.path.join(relative_path, folder)})
     workspace["folders"].append({"path": "."})
+    cwd = util.value_with_default("cwd", vscode_config, "")
+    debugger_type = "cppdbg"
+    debugger = util.value_with_default("debugger", vscode_config, "lldb")
+    if debugger == "vscode":
+        debugger_type = "cppvsdbg"
     for file in files:
         for configuration in vscode_config["configurations"]:
             target_name = os.path.basename(file[0])
             make_cmd = configuration["make"].replace("%{target_name}", target_name)
             vscode_config_name = target_name + "_" + configuration["name"]
             vscode_task_name = "build_" + target_name + "_" + configuration["name"]
+            print("build target: " + vscode_config_name)
             tasks["tasks"].append({
                 "label": vscode_task_name,
                 "command": make_cmd,
@@ -195,16 +201,16 @@ def vscode_build(config, task_name, files):
             launch["configurations"].append(
                 {
                     "name": vscode_config_name,
-                    "type": "cppdbg",
+                    "type": debugger_type,
                     "request": "launch",
                     "program": "${workspaceFolder}/" + launch_cmd,
                     "args": [],
                     "stopAtEntry": False,
                     "preLaunchTask": vscode_task_name,
-                    "cwd": "${workspaceFolder}",
+                    "cwd": "${workspaceFolder}/" + cwd,
                     "environment": [],
                     "externalConsole": False,
-                    "MIMode": "lldb"
+                    "MIMode": debugger
                 }
             )
     workspace_file = os.path.join(".vscode", "workspace.code-workspace")
@@ -981,10 +987,15 @@ def generate_build_order(config, config_all, all):
         if "-" + task_name in sys.argv or "-" + task["type"] in sys.argv or all:
             runnable.append(task_name)
     # sort
+    orderer_keys = [
+        "pre_build_order",
+        "build_order",
+        "post_build_order"
+    ]
     buckets = {
-        "pre_build_order": [],
-        "build_order": [],
-        "post_build_order": []
+        orderer_keys[0]: [],
+        orderer_keys[1]: [],
+        orderer_keys[2]: []
     }
     orderer_tasks = []
     for key in buckets.keys():
@@ -997,7 +1008,7 @@ def generate_build_order(config, config_all, all):
         if task not in orderer_tasks:
             buckets["build_order"].append(task)
     runnable_ordered = []
-    for key in buckets.keys():
+    for key in orderer_keys:
         for i in buckets[key]:
             runnable_ordered.append(i)
     return runnable_ordered
