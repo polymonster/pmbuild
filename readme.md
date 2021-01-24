@@ -666,5 +666,8 @@ vscode: {
             launch: "bin/osx/%{target_name}.app/Contents/MacOS/%{target_name}"
         }
     ]
+    debugger: "lldb"
+    cwd: "bin/osx"
 }
 ```
+You should install the vscode C/C++ extension, install and configure whatever debugger you would like tou use. You can supply different debuggers to the `debugger` member, such as `lldb` (cppdbg) or `gdb` (cppdbg) or `vscode` (cppvsdbg) depending on what you have installed.
