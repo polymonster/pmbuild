@@ -181,7 +181,10 @@ def vscode_build(config, task_name, files):
             workspace["folders"].append({"path": os.path.join(relative_path, folder)})
     workspace["folders"].append({"path": "."})
     cwd = util.value_with_default("cwd", vscode_config, "")
+    debugger_type = "cppdbg"
     debugger = util.value_with_default("debugger", vscode_config, "lldb")
+    if debugger == "vscode":
+        debugger_type = "cppvsdbg"
     for file in files:
         for configuration in vscode_config["configurations"]:
             target_name = os.path.basename(file[0])
@@ -198,7 +201,7 @@ def vscode_build(config, task_name, files):
             launch["configurations"].append(
                 {
                     "name": vscode_config_name,
-                    "type": "cppdbg",
+                    "type": debugger_type,
                     "request": "launch",
                     "program": "${workspaceFolder}/" + launch_cmd,
                     "args": [],
