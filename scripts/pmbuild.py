@@ -785,10 +785,18 @@ def help_for_make_toolchain(config, toolchain):
         "make": "make --help",
         "emmake": "emmake make --help",
         "xcodebuild": "xcodebuild -help",
-        "msbuild": msbuild
+        "msbuild": msbuild + " /help"
     }
     p = subprocess.Popen(cmd[toolchain], shell=True)
     e = p.wait()
+
+
+# prints available make targets
+def print_make_targets(files):
+    print("available make targets:")
+    print("    all (builds all the below targets)")
+    for file in files:
+        print("    " + os.path.splitext(os.path.basename(file[0]))[0])
 
 
 # runs make, and compiles from makefiles, vs solution or xcode project.
@@ -806,6 +814,7 @@ def make(config, files, options):
         subprocess.call(setup_env, shell=True)
     if len(files) == 0 or len(options) <= 0:
         print("[error] no make target specified")
+        print_make_targets(files)
         exit(1)
     # filter build files
     build_files = []
@@ -817,6 +826,7 @@ def make(config, files, options):
         build_files.append(file)
     if len(build_files) <= 0:
         print("[error] no make target found for " + str(options))
+        print_make_targets(files)
         exit(1)
     for file in build_files:
         os.chdir(os.path.dirname(file[0]))
@@ -909,6 +919,25 @@ def generate_pmbuild_config(config, taskname):
     f.write(json.dumps(md, indent=4))
 
 
+# print available profiles in config.jsn of cwd
+def print_profiles(config):
+    print("\nprofiles:")
+    print("    config.jsn (edit task settings or add profiles in here)")
+    non_profiles = [
+        "tools",
+        "tools_help",
+        "extensions",
+        "user_vars",
+        "special_args",
+        "post_build_order",
+        "pre_build_order",
+        "build_order"
+    ]
+    for p in config.keys():
+        if p not in non_profiles:
+            print(" " * 8 + p)
+
+
 # top level help
 def pmbuild_help(config):
     util.print_header("pmbuild version 4.0 -help ")
@@ -925,18 +954,7 @@ def pmbuild_help(config):
     print("    -all (build all tasks).")
     print("    -<task> (build specified tasks by name or by type).")
     print("    -n<task> (exclude specified tasks).")
-    print("\nprofiles:")
-    print("    config.jsn (edit task settings in here)")
-    non_profiles = [
-        "tools",
-        "tools_help"
-        "extensions",
-        "user_vars",
-        "special_args"
-    ]
-    for p in config.keys():
-        if p not in non_profiles:
-            print(" " * 8 + p)
+    print_profiles(config)
 
 
 # profile help
@@ -1074,6 +1092,7 @@ def main():
     if profile_pos < len(sys.argv):
         if sys.argv[profile_pos] not in config_all:
             print("[error] " + sys.argv[profile_pos] + " is not a valid pmbuild profile")
+            print_profiles(config_all)
             exit(0)
         config = config_all[sys.argv[profile_pos]]
     else:
