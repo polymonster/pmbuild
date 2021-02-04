@@ -553,7 +553,7 @@ def export_config_for_directory(task_name, directory):
     dirt_tree = file_path.split(os.sep)
     export_dict = dict()
     subdir = ""
-    if (file_path[len(os.sep) - 1] == os.sep):
+    if (file_path[0] == os.sep):
         subdir = os.sep
     for i in range(0, len(dirt_tree)):
         subdir = os.path.join(subdir, dirt_tree[i])
