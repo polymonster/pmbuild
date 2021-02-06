@@ -797,6 +797,7 @@ def print_make_targets(files):
     print("    all (builds all the below targets)")
     for file in files:
         print("    " + os.path.splitext(os.path.basename(file[0]))[0])
+    print("")
 
 
 # runs make, and compiles from makefiles, vs solution or xcode project.
@@ -807,6 +808,7 @@ def make(config, files, options):
         exit(1)
     toolchain = config["make"]["toolchain"]
     if "-help" in config["special_args"]:
+        print_make_targets(files)
         help_for_make_toolchain(config, toolchain)
         exit(0)
     if toolchain == "msbuild":
@@ -862,13 +864,22 @@ def run_web(cmd):
         time.sleep(1)
 
 
+# prints available make targets
+def print_launch_targets(files):
+    print("available launch targets:")
+    print("    all (runs all the below targets)")
+    for file in files:
+        print("    " + os.path.splitext(os.path.basename(file[0]))[0])
+    print("")
+
+
 # launches and exectuable program from the commandline
 def launch(config, files, options):
     cwd = os.getcwd()
-    if "launch" not in config.keys():
-        print("[error] run config missing from config.jsn ")
-        exit(1)
     run_config = config["launch"]
+    if "-help" in config["special_args"]:
+        print_launch_targets(files)
+        exit(0)
     if len(options) == 0:
         print("[error] no run target specified")
         exit(1)
@@ -941,19 +952,23 @@ def print_profiles(config):
 # top level help
 def pmbuild_help(config):
     util.print_header("pmbuild version 4.0 -help ")
-    print("\nusage: pmbuild <profile> <tasks...>")
-    print("       pmbuild make <target> <args...>")
-    print("       pmbuild launch <target> <args...>")
+    print("\nusage:")
+    print("    pmbuild <profile> <tasks...>")
+    print("    pmbuild make <target> <args...>")
+    print("    pmbuild launch <target> <args...>")
+    print("\nhelp:")
+    print("    pbmuild -help (display this dialog).")
+    print("    pbmuild <profile> -help (display help for the chosen profile).")
+    print("    pbmuild <profile> <tasks...> -help (display help for the chosen tasks).")
+    print("    pbmuild make <profile> -help (display help for the chosen make toolchain + list build targets).")
     print("\noptions:")
-    print("    -help (display this dialog).")
-    print("        <profile> -help (display help for the chosen profile).")
-    print("        make <profile> -help (display help for the chosen make toolchain).")
-    print("    <profile> <tasks...> -help (display help for the chosen tasks).")
-    print("    -cfg (print jsn config for current profile).")
-    print("    -verbose (print more).")
     print("    -all (build all tasks).")
     print("    -<task> (build specified tasks by name or by type).")
     print("    -n<task> (exclude specified tasks).")
+    print("    -cfg (print jsn config for current profile).")
+    print("    -verbose (print more).")
+    print("\nsettings:")
+    print("    pmbuild -credentials (creates a jsn file to allow input and encrytption of user names and passwords).")
     print_profiles(config)
 
 
@@ -1089,11 +1104,13 @@ def main():
     util.print_header(build_mode)
         
     # first arg is build profile, load profile and merge the config for platform
+    profile = ""
     if profile_pos < len(sys.argv):
         if sys.argv[profile_pos] not in config_all:
             print("[error] " + sys.argv[profile_pos] + " is not a valid pmbuild profile")
             print_profiles(config_all)
-            exit(0)
+            exit(1)
+        profile = sys.argv[profile_pos]
         config = config_all[sys.argv[profile_pos]]
     else:
         config = config_all
@@ -1105,6 +1122,14 @@ def main():
     elif "-help" in special_args and len(sys.argv) == 2 and ("make" in sys.argv or "launch" in sys.argv):
         pmbuild_help(config_all)
         exit(0)
+
+
+    command_mode = ["make", "launch"]
+    for cm in command_mode:
+        if cm in sys.argv:
+            if cm not in config.keys():
+                print("[error] " + cm + " is not configured in config.jsn (" + profile + ")")
+                exit(1)
 
     # load config user for user specific values (sdk version, vcvarsall.bat etc.)
     configure_user(config, sys.argv)
