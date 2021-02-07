@@ -94,7 +94,7 @@ pmbuild mac -all -ncopy
 
 # Config Files
 
-Configs are written in [jsn](https;//github.com/polymonster/jsn). Define build tasks in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
+Configs are written in [jsn](https://github.com/polymonster/jsn). Define build tasks in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
 
 ```yaml
 {
