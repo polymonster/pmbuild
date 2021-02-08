@@ -199,17 +199,15 @@ jsn allows inheritence and variables `${variable}` evaluated with dollar sign wh
 
 # Special Variables
 
-pmbuild also provides some special `%{variables}` evaluated with percentage sign these are evaulated at runtime and some of them are configurable by the user and stored in `config.user.jsn` pmbuild has some default user variables which you will auto located and configured or you may be prompted to input a value.
+pmbuild also provides some special `%{variables}` evaluated with percentage sign these are evaulated at runtime or configurable by per user and stored in `config.user.jsn`.
 
 ```
 %{vs_latest} = locates the latest installation of visual studio ie (vs2019)
 %{windows_sdk_version} = windows sdk version
-%{input_file}" = input file from "files" object
-%{output_file}" = output file from "files" object
-%{teamid}" = apple developer team id
+%{input_file} = input file from "files" object
+%{output_file} = output file from "files" object
+%{export_args} = arguments per file from export.jsn
 ```
-
-You can add your own user variables for use in any extension scripts to `config.user.jsn` in the current working directory.
 
 # Copy
 
@@ -300,7 +298,7 @@ clean: {
 
 # Tools
 
-Run your own tools or scripts and feed them files with the `files` objects as described in the copy task. We can register tools for <mac, windows or linux> which is the system pmbuild is currently running on. We can target other platforms such as PlayStation or Xbox but we still build on a windows machine and for iOS we target the iOS platform but build from macOS for instance:
+Run your own tools or scripts and feed them files with the `files` objects as described in the copy task. We can register different tools for <mac, windows or linux>.
 
 
 ```yaml
