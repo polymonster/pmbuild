@@ -228,26 +228,38 @@ def locate_vs_root():
     vs = "Microsoft Visual Studio"
     vs_dir = ""
     for v in pf_env:
-        d = os.environ[v]
-        if d:
-            if vs in os.listdir(d):
-                vs_dir = os.path.join(d, vs)
-                break
+        if v in os.environ:
+            d = os.environ[v]
+            if d:
+                if vs in os.listdir(d):
+                    vs_dir = os.path.join(d, vs)
+                    break
     return vs_dir
 
 
 # find latest visual studio version
 def locate_vs_latest(config):
     vs_dir = locate_vs_root()
-    if len(vs_dir) == 0:
-        print("[warning]: could not auto locate visual studio, using vs2017 as default")
-        return "vs2017"
-    supported = ["2017", "2019"]
-    versions = sorted(os.listdir(vs_dir), reverse=False)
-    update_user_config("vs_latest", "vs" + str(versions[0]), config)
-    for v in versions:
-        if v in supported:
-            return "vs" + v
+    if len(vs_dir) > 0:
+        supported = ["2017", "2019"]
+        versions = sorted(os.listdir(vs_dir), reverse=False)
+        for v in versions:
+            if v in supported:
+                update_user_config("vs_latest", "vs" + str(versions[0]), config)
+                return "vs" + v
+        print("[warning] could not locate valid visual studio installation in: " + vs_dir)
+    # ensure we have vcvars all and try figuring out vs version from there
+    configure_vc_vars_all(config)
+    vcva = config["user_vars"]["vcvarsall_dir"]
+    vs = "Microsoft Visual Studio"
+    if vs in vcva:
+        dirs = vcva.split(os.sep)
+        for i in range(0, len(dirs)):
+            if dirs[i] == vs and i < len(dirs):
+                update_user_config("vs_latest", "vs" + dirs[i+1], config)
+                return "vs" + dirs[i+1]
+    print("[warning] could not auto detect vs_latest, using vs2019 as default")
+    return "vs2019"
 
 
 # attempt to locate vc vars all by looking in program files, and finding visual studio installations
@@ -683,6 +695,9 @@ def expand_args(args, config, task_name, input_file, output_file):
             if arg.find(v) != -1:
                 if uv == "teamid":
                     configure_teamid(config)
+                if uv not in config["user_vars"]:
+                    print("[error] missing variable " + uv)
+                    exit(1)
                 arg = arg.replace(v, config["user_vars"][uv])
         cmd += arg + " "
     return cmd
