@@ -199,7 +199,7 @@ jsn allows inheritence and variables `${variable}` evaluated with dollar sign wh
 
 # Special Variables
 
-pmbuild also provides some special `%{variables}` evaluated with percentage sign these are evaulated at runtime or configurable by per user and stored in `config.user.jsn`.
+pmbuild also provides some special `%{variables}` evaluated with percentage sign these are evaulated at runtime, configurable per user and stored in `config.user.jsn`.
 
 ```
 %{vs_latest} = locates the latest installation of visual studio ie (vs2019)
