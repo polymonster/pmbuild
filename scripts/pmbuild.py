@@ -241,7 +241,8 @@ def locate_vs_root():
 def locate_vs_latest(config):
     vs_dir = locate_vs_root()
     if len(vs_dir) > 0:
-        supported = ["2017", "2019"]
+        supported = ["2015", "2017", "2019"]
+        supported = []
         versions = sorted(os.listdir(vs_dir), reverse=False)
         for v in versions:
             if v in supported:
@@ -250,14 +251,17 @@ def locate_vs_latest(config):
         print("[warning] could not locate valid visual studio installation in: " + vs_dir)
     # ensure we have vcvars all and try figuring out vs version from there
     configure_vc_vars_all(config)
-    vcva = config["user_vars"]["vcvarsall_dir"]
-    vs = "Microsoft Visual Studio"
-    if vs in vcva:
-        dirs = vcva.split(os.sep)
-        for i in range(0, len(dirs)):
-            if dirs[i] == vs and i < len(dirs):
-                update_user_config("vs_latest", "vs" + dirs[i+1], config)
-                return "vs" + dirs[i+1]
+    if "vcvarsall_dir" in config.keys():
+        vcva = config["vcvarsall_dir"]
+        vs = "Microsoft Visual Studio"
+        if vs in vcva:
+            dirs = vcva.split(os.sep)
+            for i in range(0, len(dirs)):
+                if dirs[i] == vs and i < len(dirs):
+                    vs_version = "vs" + dirs[i+1]
+                    print("[vs_latest] found " + vs_version + " from vcvarsall_dir (" + vcva + ")")
+                    update_user_config("vs_latest", vs_version, config)
+                    return vs_version
     print("[warning] could not auto detect vs_latest, using vs2019 as default")
     return "vs2019"
 
