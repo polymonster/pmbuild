@@ -242,7 +242,6 @@ def locate_vs_latest(config):
     vs_dir = locate_vs_root()
     if len(vs_dir) > 0:
         supported = ["2015", "2017", "2019"]
-        supported = []
         versions = sorted(os.listdir(vs_dir), reverse=False)
         for v in versions:
             if v in supported:
@@ -263,6 +262,7 @@ def locate_vs_latest(config):
                     update_user_config("vs_latest", vs_version, config)
                     return vs_version
     print("[warning] could not auto detect vs_latest, using vs2019 as default")
+    update_user_config("vs_latest", "vs2019", config)
     return "vs2019"
 
 
