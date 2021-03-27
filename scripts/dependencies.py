@@ -7,7 +7,7 @@ default_settings = dict()
 default_settings["textures_dir"] = "assets/textures/"
 default_settings["models_dir"] = "assets/mesh/"
 
-
+# leagacy pmbuild for pmtech
 def delete_orphaned_files(build_dir, platform_data_dir):
     for root, dir, files in os.walk(build_dir):
         for file in files:
@@ -28,6 +28,7 @@ def delete_orphaned_files(build_dir, platform_data_dir):
                                     break
 
 
+# leagacy pmbuild for pmtech
 def get_build_config_setting(dir_name):
     if os.path.exists("build_config.json"):
         build_config_file = open("build_config.json", "r")
@@ -38,6 +39,7 @@ def get_build_config_setting(dir_name):
     return default_settings[dir_name]
 
 
+# leagacy pmbuild for pmtech
 def export_config_merge(master, second):
     for key in master.keys():
         if key in second.keys():
@@ -48,6 +50,7 @@ def export_config_merge(master, second):
     return master
 
 
+# leagacy pmbuild for pmtech
 def get_export_config(filename):
     export_info = dict()
     rpath = filename.replace(os.getcwd(), "")
@@ -65,10 +68,37 @@ def get_export_config(filename):
     return export_info
 
 
+# leagacy pmbuild for pmtech
 def sanitize_filename(filename):
     sanitized_name = filename.replace("@", ":")
     sanitized_name = sanitized_name.replace('/', os.sep)
     return sanitized_name
+
+
+# leagacy pmbuild for pmtech
+def check_up_to_date(dependencies, dest_file):
+    filename = os.path.join(dependencies["dir"], "dependencies.json")
+    if not os.path.exists(filename):
+        print("depends does not exist")
+        return False
+    file = open(filename)
+    d_str = file.read()
+    d_json = json.loads(d_str)
+    file_exists = False
+    for d in d_json["files"]:
+        for key in d.keys():
+            dependecy_file = sanitize_filename(key)
+            if dest_file == dependecy_file:
+                for i in d[key]:
+                    file_exists = True
+                    sanitized = sanitize_filename(i["name"])
+                    if not os.path.exists(sanitized):
+                        return False
+                    if i["timestamp"] < os.path.getmtime(sanitized):
+                        return False
+    if not file_exists:
+        return False
+    return True
 
 
 def create_info(file):
@@ -80,7 +110,10 @@ def create_info(file):
 
 def create_dependency_info(inputs, outputs, cmdline=""):
     info = dict()
-    info["cmdline"] = cmdline
+    if type(cmdline) == list:     
+        info["cmdlines"] = cmdline
+    else:
+        info["cmdline"] = cmdline
     info["files"] = dict()
     for o in outputs:
         o = os.path.join(os.getcwd(), o)
@@ -107,31 +140,7 @@ def create_dependency_single(input, output, cmdline=""):
     return info
 
 
-def check_up_to_date(dependencies, dest_file):
-    filename = os.path.join(dependencies["dir"], "dependencies.json")
-    if not os.path.exists(filename):
-        print("depends does not exist")
-        return False
-    file = open(filename)
-    d_str = file.read()
-    d_json = json.loads(d_str)
-    file_exists = False
-    for d in d_json["files"]:
-        for key in d.keys():
-            dependecy_file = sanitize_filename(key)
-            if dest_file == dependecy_file:
-                for i in d[key]:
-                    file_exists = True
-                    sanitized = sanitize_filename(i["name"])
-                    if not os.path.exists(sanitized):
-                        return False
-                    if i["timestamp"] < os.path.getmtime(sanitized):
-                        return False
-    if not file_exists:
-        return False
-    return True
-
-
+# check depenency is up to date for a single output file, made from 1 or more input files 
 def check_up_to_date_single(dest_file, deps):
     dep_filename = util.change_ext(dest_file, ".dep")
     if not os.path.exists(dep_filename):
@@ -145,6 +154,12 @@ def check_up_to_date_single(dest_file, deps):
     if "cmdline" in deps:
         if "cmdline" not in d_json.keys() or deps["cmdline"] != d_json["cmdline"]:
             print(dest_file + " cmdline changed")
+            return False
+    # check multi cmdlines
+    if "cmdlines" in deps:
+        if "cmdlines" not in d_json.keys():
+            return False
+        if deps["cmdlines"] != d_json["cmdlines"]:
             return False
     # check for new additions
     dep_files = []

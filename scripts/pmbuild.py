@@ -630,9 +630,13 @@ def export_config_for_directory(task_name, directory):
     dirt_tree = file_path.split(os.sep)
     export_dict = dict()
     subdir = ""
+    # handles unix paths /starting/with/
     if (len(file_path) > 0 and file_path[0] == os.sep):
         subdir = os.sep
     for i in range(0, len(dirt_tree)):
+        # handles windows drives
+        if dirt_tree[i].endswith(":"):
+            dirt_tree[i] += os.sep
         subdir = os.path.join(subdir, dirt_tree[i])
         export = os.path.join(subdir, "export.jsn")
         if os.path.exists(export):
