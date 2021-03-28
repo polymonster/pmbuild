@@ -21,6 +21,11 @@ import cgu.cgu as cgu
 
 from http.server import HTTPServer, CGIHTTPRequestHandler
 
+# exit's on error but allows user to choose not to
+def error_exit(config):
+    if "ignore_errors" not in config["special_args"]:
+        exit(1)
+
 
 # prompts user for password to access encrypted credentials files
 def prompt_password():
@@ -61,7 +66,7 @@ def read_and_decode_credentials(key):
 
 
 # looks up credentials files and retrieves passwords or keys
-def lookup_credentials(lookup):
+def lookup_credentials(config, lookup):
     if not os.path.exists("credentials.bin"):
         print("[error] no credentials file found, run pmbuild -credentials to create and edit one.")
     key = prompt_password()
@@ -69,7 +74,7 @@ def lookup_credentials(lookup):
     if lookup in credentials.keys():
         return credentials[lookup]
     print("[error] missing credentials for " + lookup)
-    exit(1)
+    error_exit(config)
 
 
 # decrypt credential files into credentials.unlocked.jsn to allow user edits, and the encrypts into credentials.bin
@@ -375,7 +380,7 @@ def connect(config, task_name):
         if "user" and "password" in cfg:
             user_pass = cfg["user"] + ":" + cfg["password"] + "@"
         elif "credentials" in cfg:
-            j = lookup_credentials(cfg["credentials"])
+            j = lookup_credentials(config, cfg["credentials"])
             user_pass = cfg["credentials"] + ":" + str(j) + "@"
             cfg["user"] = cfg["credentials"]
             cfg["password"] = str(j)
@@ -701,9 +706,12 @@ def expand_args(args, config, task_name, input_file, output_file):
                     configure_teamid(config)
                 if uv not in config["user_vars"]:
                     print("[error] missing variable " + uv)
-                    exit(1)
+                    error_exit(config)
                 arg = arg.replace(v, config["user_vars"][uv])
         cmd += arg + " "
+    for arg in config["user_args"]:
+        cmd += arg + " "
+    cmd = cmd.strip()
     return cmd
 
 
@@ -744,17 +752,17 @@ def run_tool_help(config, task_name, tool):
 def shell(config, task_name):
     if "commands" not in config[task_name]:
         print("[error] shell must specify array of commands:[...]")
-        exit(1)
+        error_exit(config)
     commands = config[task_name]["commands"]
     if type(commands) != list:
         print("[error] shell must be array of strings")
-        exit(1)
+        error_exit(config)
     for cmd in commands:
         p = subprocess.Popen(cmd, shell=True)
         e = p.wait()
         if e:
             print("[error] running " + cmd)
-            exit(1)
+            error_exit(config)
 
 
 # generate a cli command for building with different toolchains (make, gcc/clang, xcodebuild, msbuild)
@@ -826,7 +834,7 @@ def make(config, files, options):
     cwd = os.getcwd()
     if "make" not in config.keys():
         print("[error] make config missing from config.jsn ")
-        exit(1)
+        error_exit(config)
     toolchain = config["make"]["toolchain"]
     if "-help" in config["special_args"]:
         print_make_targets(files)
@@ -838,7 +846,7 @@ def make(config, files, options):
     if len(files) == 0 or len(options) <= 0:
         print("[error] no make target specified")
         print_make_targets(files)
-        exit(1)
+        error_exit(config)
     # filter build files
     build_files = []
     for file in files:
@@ -850,7 +858,7 @@ def make(config, files, options):
     if len(build_files) <= 0:
         print("[error] no make target found for " + str(options))
         print_make_targets(files)
-        exit(1)
+        error_exit(config)
     for file in build_files:
         os.chdir(os.path.dirname(file[0]))
         proj = os.path.basename(file[0])
@@ -858,7 +866,7 @@ def make(config, files, options):
         p = subprocess.Popen(cmd, shell=True)
         e = p.wait()
         if e != 0:
-            exit(1)
+            error_exit(config)
         os.chdir(cwd)
 
 
@@ -903,7 +911,7 @@ def launch(config, files, options):
         exit(0)
     if len(options) == 0:
         print("[error] no run target specified")
-        exit(1)
+        error_exit(config)
     targets = []
     for file in files:
         file = file[0]
@@ -913,7 +921,7 @@ def launch(config, files, options):
             targets.append((os.path.dirname(file), os.path.basename(file), tn))
     if len(targets) == 0:
         print("[error] no run targets found for " + str(options))
-        exit(1)
+        error_exit(config)
     # switch to bin dir
     for t in targets:
         os.chdir(t[0])
@@ -929,7 +937,7 @@ def launch(config, files, options):
             e = p.wait()
             print(t[2] + " exited with code: " + str(e))
             if e != 0:
-                exit(1)
+                error_exit(config)
         os.chdir(cwd)
 
 
@@ -988,6 +996,8 @@ def pmbuild_help(config):
     print("    -n<task> (exclude specified tasks).")
     print("    -cfg (print jsn config for current profile).")
     print("    -verbose (print more).")
+    print("    -ignore_errors (will not exit on error).")
+    print("    -args (anything supplied after -args will be forwarded to tools and other scripts).")
     print("\nsettings:")
     print("    pmbuild -credentials (creates a jsn file to allow input and encrytption of user names and passwords).")
     print_profiles(config)
@@ -1079,7 +1089,7 @@ def main():
     # must have config.json in working directory
     if not os.path.exists(config_file):
         print("[error] no config.jsn in current directory.")
-        exit(1)
+        error_exit(config)
 
     # load jsn, inherit etc
     config_all = jsn.loads(open(config_file, "r").read())
@@ -1093,7 +1103,8 @@ def main():
         "-silent",
         "-cfg",
         "-clean",
-        "-all"
+        "-all",
+        "-ignore_errors"
     ]
 
     # switch between different modes
@@ -1107,6 +1118,14 @@ def main():
     implicit_all = False
     if len(sys.argv) == 2 and profile_pos == 1:
         implicit_all = True
+
+    # extract extra -args
+    user_args = []
+    if "-args" in sys.argv:
+        index = sys.argv.index("-args")
+        for i in range(index+1, len(sys.argv)):
+            user_args.append(sys.argv[i])
+        sys.argv = sys.argv[:index]
 
     for arg in reversed(special_args):
         if arg not in sys.argv:
@@ -1130,7 +1149,7 @@ def main():
         if sys.argv[profile_pos] not in config_all:
             print("[error] " + sys.argv[profile_pos] + " is not a valid pmbuild profile")
             print_profiles(config_all)
-            exit(1)
+            error_exit(config)
         profile = sys.argv[profile_pos]
         config = config_all[sys.argv[profile_pos]]
     else:
@@ -1150,7 +1169,7 @@ def main():
         if cm in sys.argv:
             if cm not in config.keys():
                 print("[error] " + cm + " is not configured in config.jsn (" + profile + ")")
-                exit(1)
+                error_exit(config)
 
     # load config user for user specific values (sdk version, vcvarsall.bat etc.)
     configure_user(config, sys.argv)
@@ -1166,6 +1185,7 @@ def main():
             config[task_name]["type"] = task_name
 
     config["special_args"] = special_args
+    config["user_args"] =  user_args
 
     # obtain tools for this platform
     config["tools"] = dict()

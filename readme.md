@@ -121,23 +121,31 @@ Configs are written in [jsn](https://github.com/polymonster/jsn). Define build t
 
 ```
 pmbuild -help
-usage: pmbuild <profile> <tasks...>
-       pmbuild make <target> <args...>
-       pmbuild launch <target> <args...>
+usage:
+    pmbuild <profile> <tasks...>
+    pmbuild make <target> <args...>
+    pmbuild launch <target> <args...>
+
+help:
+    pbmuild -help (display this dialog).
+    pbmuild <profile> -help (display help for the chosen profile).
+    pbmuild <profile> <tasks...> -help (display help for the chosen tasks).
+    pbmuild make <profile> -help (display help for the chosen make toolchain + list build targets).
 
 options:
-    -help (display this dialog).
-        <profile> -help (display help for the chosen profile).
-        make <profile> -help (display help for the chosen make toolchain).
-    <profile> <tasks...> -help (display help for the chosen tasks).
-    -cfg (print jsn config for current profile).
-    -verbose (print more).
     -all (build all tasks).
     -<task> (build specified tasks by name or by type).
     -n<task> (exclude specified tasks).
+    -cfg (print jsn config for current profile).
+    -verbose (print more).
+    -ignore_errors (will not exit on error).
+    -args (anything supplied after -args will be forwarded to tools and other scripts).
+
+settings:
+    pmbuild -credentials (creates a jsn file to allow input and encrytption of user names and passwords).
 
 profiles:
-    config.jsn (edit task settings in here)
+    config.jsn (edit task settings or add profiles in here)
         base
         mac
         mac-gl
@@ -150,8 +158,6 @@ profiles:
         linux-vulkan
         web
         android
-        extensions
-        tools_help
 ```
 
 # Display Available Tasks For Profile
