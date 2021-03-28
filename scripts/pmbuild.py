@@ -1093,7 +1093,7 @@ def main():
     # must have config.json in working directory
     if not os.path.exists(config_file):
         print("[error] no config.jsn in current directory.")
-        error_exit(config)
+        exit(1)
 
     # load jsn, inherit etc
     config_all = jsn.loads(open(config_file, "r").read())
@@ -1153,7 +1153,7 @@ def main():
         if sys.argv[profile_pos] not in config_all:
             print("[error] " + sys.argv[profile_pos] + " is not a valid pmbuild profile")
             print_profiles(config_all)
-            error_exit(config)
+            exit(1)
         profile = sys.argv[profile_pos]
         config = config_all[sys.argv[profile_pos]]
     else:
