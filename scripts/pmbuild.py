@@ -491,6 +491,23 @@ def get_task_files_raw(files_task):
     return pairs
 
 
+# output container in certain formats
+def file_list_to_container_format(config, task_name, files):
+    fmt = "default"
+    if "container_format" in config[task_name]:
+        fmt = config[task_name]["container_format"]
+    if fmt == "ffmpeg":
+        files = files.strip()
+        lines = files.split("\n")
+        ffmpeg_files = ""
+        for l in lines:
+            ffmpeg_files += "file '" + l + "'\n"
+            ffmpeg_files += "duration 0.2" + "\n"
+        return ffmpeg_files
+    # default is a list of files separted by new line
+    return files
+
+
 # removes files belonging to excludes, expand containers removing loose files from the list, and inserts the container
 def filter_files(config, task_name, files):
     dirs = []
@@ -511,11 +528,15 @@ def filter_files(config, task_name, files):
                     break
         if not excluded:
             lookups[file[0]] = (file[0], file[1])
+    # check for processing containers
+    containers = util.value_with_default("containers", config[task_name], True)
+    container_output_ext = util.value_with_default("change_ext", config[task_name], ".txt")
     for directory in dirs:
         en = os.path.join(directory, "export.jsn")
         if os.path.exists(en):
             j = jsn.loads(open(en, "r").read())
             if "container" in j:
+                container_dir = os.path.dirname(en)
                 bn = os.path.basename(directory)
                 dir_files = sorted(os.listdir(directory))
                 filtered_files = []
@@ -527,7 +548,7 @@ def filter_files(config, task_name, files):
                         for df in dir_files:
                             if fnmatch.fnmatch(df, pattern):
                                 filtered_files.append(df)
-                files = ""
+                container_files = ""
                 dest_file = ""
                 for file in filtered_files:
                     fp = os.path.join(directory, file)
@@ -536,7 +557,16 @@ def filter_files(config, task_name, files):
                         dest_dir = os.path.dirname(os.path.dirname(lookups[fp][1]))
                         dest_file = os.path.join(dest_dir, bn + dest_ext)
                         lookups.pop(fp)
-                    files += fp + "\n"
+                        fp = util.sanitize_file_path(fp)
+                        fp = os.path.normpath(fp)
+                        fp.replace("\\", "/")
+                    container_files += fp + "\n"
+                if len(dest_file) == 0:
+                    for file in files:
+                        if os.path.dirname(file[0]) == container_dir:
+                            dest_file = os.path.dirname(file[1]) + container_output_ext
+                            break
+                container_files = file_list_to_container_format(config, task_name, container_files)
                 container_file = en.replace("export.jsn", bn + ".container.txt")
                 current_files = ""
                 newest = 0
@@ -547,9 +577,9 @@ def filter_files(config, task_name, files):
                 if os.path.exists(container_file):
                     current_files = open(container_file, "r").read()
                     built = os.path.getmtime(container_file)
-                if current_files != files or newest > built:
-                    open(container_file, "w+").write(files)
-                if container_file not in lookups:
+                if current_files != container_files or newest > built:
+                    open(container_file, "w+").write(container_files)
+                if container_file not in lookups and containers:
                     lookups[container_file] = (container_file, dest_file)
     pairs = []
     for f in lookups.keys():
