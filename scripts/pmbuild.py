@@ -497,18 +497,15 @@ def get_task_files_raw(files_task):
 
 
 # output container in certain formats
-def file_list_to_container_format(config, task_name, files):
-    fmt = "default"
-    if "container_format" in config[task_name]:
-        fmt = config[task_name]["container_format"]
-    if fmt == "ffmpeg":
+def file_list_to_container_format(container, files):
+    if "format" in container:
         files = files.strip()
         lines = files.split("\n")
-        ffmpeg_files = ""
+        fmt_files = ""
         for l in lines:
-            ffmpeg_files += "file '" + l + "'\n"
-            ffmpeg_files += "duration 0.2" + "\n"
-        return ffmpeg_files
+            rep = container["format"].replace("%{container_file}", l)
+            fmt_files += rep + "\n"
+        return fmt_files
     # default is a list of files separted by new line
     return files
 
@@ -571,7 +568,7 @@ def filter_files(config, task_name, files):
                         if os.path.dirname(file[0]) == container_dir:
                             dest_file = os.path.dirname(file[1]) + container_output_ext
                             break
-                container_files = file_list_to_container_format(config, task_name, container_files)
+                container_files = file_list_to_container_format(j["container"], container_files)
                 container_file = en.replace("export.jsn", bn + ".container.txt")
                 current_files = ""
                 newest = 0
@@ -584,7 +581,7 @@ def filter_files(config, task_name, files):
                     built = os.path.getmtime(container_file)
                 if current_files != container_files or newest > built:
                     open(container_file, "w+").write(container_files)
-                if container_file not in lookups and containers:
+                if containers:
                     lookups[container_file] = (container_file, dest_file)
     pairs = []
     for f in lookups.keys():
