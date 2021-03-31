@@ -24,7 +24,7 @@ from http.server import HTTPServer, CGIHTTPRequestHandler
 # exit's on error but allows user to choose not to
 def error_exit(config):
     if "ignore_errors" not in config["special_args"]:
-        exit(1)
+        sys.exit(1)
 
 
 # prompts user for password to access encrypted credentials files
@@ -766,7 +766,7 @@ def run_tool(config, task_name, tool, files):
             dependencies.write_to_file_single(d, file[1])
         if e != 0:
             print("[error] processing file " + file[0])
-            exit(e)
+            error_exit(config)
 
 
 # displays help for generic tool
@@ -870,7 +870,7 @@ def make(config, files, options):
     if "-help" in config["special_args"]:
         print_make_targets(files)
         help_for_make_toolchain(config, toolchain)
-        exit(0)
+        sys.exit(0)
     if toolchain == "msbuild":
         setup_env = setup_vcvars(config)
         subprocess.call(setup_env, shell=True)
@@ -939,7 +939,7 @@ def launch(config, files, options):
     run_config = config["launch"]
     if "-help" in config["special_args"]:
         print_launch_targets(files)
-        exit(0)
+        sys.exit(0)
     if len(options) == 0:
         print("[error] no run target specified")
         error_exit(config)
@@ -1120,7 +1120,7 @@ def main():
     # must have config.json in working directory
     if not os.path.exists(config_file):
         print("[error] no config.jsn in current directory.")
-        exit(1)
+        sys.exit(1)
 
     # load jsn, inherit etc
     config_all = jsn.loads(open(config_file, "r").read())
@@ -1180,7 +1180,7 @@ def main():
         if sys.argv[profile_pos] not in config_all:
             print("[error] " + sys.argv[profile_pos] + " is not a valid pmbuild profile")
             print_profiles(config_all)
-            exit(1)
+            sys.exit(1)
         profile = sys.argv[profile_pos]
         config = config_all[sys.argv[profile_pos]]
     else:
@@ -1189,10 +1189,10 @@ def main():
     # print pmbuild top level help
     if "-help" in special_args and len(sys.argv) == 1:
         pmbuild_help(config_all)
-        exit(0)
+        sys.exit(0)
     elif "-help" in special_args and len(sys.argv) == 2 and ("make" in sys.argv or "launch" in sys.argv):
         pmbuild_help(config_all)
-        exit(0)
+        sys.exit(0)
 
 
     command_mode = ["make", "launch"]
@@ -1275,7 +1275,7 @@ def main():
         if "-help" in special_args and len(runnable_ordered) == 0:
             runnable_ordered = generate_build_order(config, config_all, all)
             pmbuild_profile_help(config, runnable_ordered)
-            exit(0)
+            sys.exit(0)
 
         # run tasks
         for task_name in runnable_ordered:
