@@ -24,7 +24,7 @@ from http.server import HTTPServer, CGIHTTPRequestHandler
 # exit's on error but allows user to choose not to
 def error_exit(config):
     if "ignore_errors" not in config["special_args"]:
-        exit(1)
+        sys.exit(1)
 
 
 # prompts user for password to access encrypted credentials files
@@ -496,6 +496,20 @@ def get_task_files_raw(files_task):
     return pairs
 
 
+# output container in certain formats
+def file_list_to_container_format(container, files):
+    if "format" in container:
+        files = files.strip()
+        lines = files.split("\n")
+        fmt_files = ""
+        for l in lines:
+            rep = container["format"].replace("%{container_file}", l)
+            fmt_files += rep + "\n"
+        return fmt_files
+    # default is a list of files separted by new line
+    return files
+
+
 # removes files belonging to excludes, expand containers removing loose files from the list, and inserts the container
 def filter_files(config, task_name, files):
     dirs = []
@@ -516,11 +530,15 @@ def filter_files(config, task_name, files):
                     break
         if not excluded:
             lookups[file[0]] = (file[0], file[1])
+    # check for processing containers
+    containers = util.value_with_default("containers", config[task_name], True)
+    container_output_ext = util.value_with_default("change_ext", config[task_name], ".txt")
     for directory in dirs:
         en = os.path.join(directory, "export.jsn")
         if os.path.exists(en):
             j = jsn.loads(open(en, "r").read())
             if "container" in j:
+                container_dir = os.path.dirname(en)
                 bn = os.path.basename(directory)
                 dir_files = sorted(os.listdir(directory))
                 filtered_files = []
@@ -532,7 +550,7 @@ def filter_files(config, task_name, files):
                         for df in dir_files:
                             if fnmatch.fnmatch(df, pattern):
                                 filtered_files.append(df)
-                files = ""
+                container_files = ""
                 dest_file = ""
                 for file in filtered_files:
                     fp = os.path.join(directory, file)
@@ -541,7 +559,16 @@ def filter_files(config, task_name, files):
                         dest_dir = os.path.dirname(os.path.dirname(lookups[fp][1]))
                         dest_file = os.path.join(dest_dir, bn + dest_ext)
                         lookups.pop(fp)
-                    files += fp + "\n"
+                        fp = util.sanitize_file_path(fp)
+                        fp = os.path.normpath(fp)
+                        fp.replace("\\", "/")
+                    container_files += fp + "\n"
+                if len(dest_file) == 0:
+                    for file in files:
+                        if os.path.dirname(file[0]) == container_dir:
+                            dest_file = os.path.dirname(file[1]) + container_output_ext
+                            break
+                container_files = file_list_to_container_format(j["container"], container_files)
                 container_file = en.replace("export.jsn", bn + ".container.txt")
                 current_files = ""
                 newest = 0
@@ -552,9 +579,9 @@ def filter_files(config, task_name, files):
                 if os.path.exists(container_file):
                     current_files = open(container_file, "r").read()
                     built = os.path.getmtime(container_file)
-                if current_files != files or newest > built:
-                    open(container_file, "w+").write(files)
-                if container_file not in lookups:
+                if current_files != container_files or newest > built:
+                    open(container_file, "w+").write(container_files)
+                if containers:
                     lookups[container_file] = (container_file, dest_file)
     pairs = []
     for f in lookups.keys():
@@ -739,7 +766,7 @@ def run_tool(config, task_name, tool, files):
             dependencies.write_to_file_single(d, file[1])
         if e != 0:
             print("[error] processing file " + file[0])
-            exit(e)
+            error_exit(config)
 
 
 # displays help for generic tool
@@ -843,7 +870,7 @@ def make(config, files, options):
     if "-help" in config["special_args"]:
         print_make_targets(files)
         help_for_make_toolchain(config, toolchain)
-        exit(0)
+        sys.exit(0)
     if toolchain == "msbuild":
         setup_env = setup_vcvars(config)
         subprocess.call(setup_env, shell=True)
@@ -912,7 +939,7 @@ def launch(config, files, options):
     run_config = config["launch"]
     if "-help" in config["special_args"]:
         print_launch_targets(files)
-        exit(0)
+        sys.exit(0)
     if len(options) == 0:
         print("[error] no run target specified")
         error_exit(config)
@@ -1093,7 +1120,7 @@ def main():
     # must have config.json in working directory
     if not os.path.exists(config_file):
         print("[error] no config.jsn in current directory.")
-        exit(1)
+        sys.exit(1)
 
     # load jsn, inherit etc
     config_all = jsn.loads(open(config_file, "r").read())
@@ -1153,7 +1180,7 @@ def main():
         if sys.argv[profile_pos] not in config_all:
             print("[error] " + sys.argv[profile_pos] + " is not a valid pmbuild profile")
             print_profiles(config_all)
-            exit(1)
+            sys.exit(1)
         profile = sys.argv[profile_pos]
         config = config_all[sys.argv[profile_pos]]
     else:
@@ -1162,10 +1189,10 @@ def main():
     # print pmbuild top level help
     if "-help" in special_args and len(sys.argv) == 1:
         pmbuild_help(config_all)
-        exit(0)
+        sys.exit(0)
     elif "-help" in special_args and len(sys.argv) == 2 and ("make" in sys.argv or "launch" in sys.argv):
         pmbuild_help(config_all)
-        exit(0)
+        sys.exit(0)
 
 
     command_mode = ["make", "launch"]
@@ -1248,7 +1275,7 @@ def main():
         if "-help" in special_args and len(runnable_ordered) == 0:
             runnable_ordered = generate_build_order(config, config_all, all)
             pmbuild_profile_help(config, runnable_ordered)
-            exit(0)
+            sys.exit(0)
 
         # run tasks
         for task_name in runnable_ordered:
