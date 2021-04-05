@@ -978,10 +978,12 @@ def generate_pmbuild_config(config, taskname):
     wd = os.getcwd()
     dd = pmbuild_config["destination"]
     profile = config["user_vars"]["profile"]
+    multi = " && "
+    pmbuild_config["pmbuild_cmd"] = util.sanitize_file_path(pmbuild_config["pmbuild_cmd"])
     md = {
         "profile": profile,
         "pmbuild_cmd": pmbuild_config["pmbuild_cmd"],
-        "pmbuild": "cd " + wd + " && " + pmbuild_config["pmbuild_cmd"] + " " + profile + " "
+        "pmbuild": "cd " + wd + multi + pmbuild_config["pmbuild_cmd"] + " " + profile + " "
     }
     util.create_dir(dd)
     np = os.path.join(dd, "pmbuild_config.json")
