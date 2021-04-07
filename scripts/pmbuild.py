@@ -706,6 +706,27 @@ def export_config_for_file(task_name, filename):
     return file_config
 
 
+# replaces user vars %{var}
+def replace_user_vars(arg, config):
+    # replace user_vars
+    user_vars = [
+        "vs_latest",
+        "windows_sdk_version",
+        "teamid",
+        "cwd"
+    ]
+    for uv in user_vars:
+        v = "%{" + uv + "}"
+        if arg.find(v) != -1:
+            if uv == "teamid":
+                configure_teamid(config)
+            if uv not in config["user_vars"]:
+                print("[error] missing variable " + uv)
+                error_exit(config)
+            arg = arg.replace(v, config["user_vars"][uv])
+    return arg
+
+
 # expand args evaluating %{input_file}, %{output_file} and %{export_args} returns None, if export args are expect but missing
 def expand_args(args, config, task_name, input_file, output_file):
     cmd = ""
@@ -728,21 +749,7 @@ def expand_args(args, config, task_name, input_file, output_file):
                         val = ""
                 arg += export_arg + val + " "
             arg = arg.strip()
-        # replace user_vars
-        user_vars = [
-            "vs_latest",
-            "windows_sdk_version",
-            "teamid"
-        ]
-        for uv in user_vars:
-            v = "%{" + uv + "}"
-            if arg.find(v) != -1:
-                if uv == "teamid":
-                    configure_teamid(config)
-                if uv not in config["user_vars"]:
-                    print("[error] missing variable " + uv)
-                    error_exit(config)
-                arg = arg.replace(v, config["user_vars"][uv])
+        arg = replace_user_vars(arg, config)
         cmd += arg + " "
     for arg in config["user_args"]:
         cmd += arg + " "
@@ -797,6 +804,7 @@ def shell(config, task_name):
         print("[error] shell must be array of strings")
         error_exit(config)
     for cmd in commands:
+        cmd = replace_user_vars(cmd, config)
         p = subprocess.Popen(cmd, shell=True)
         e = p.wait()
         if e:
@@ -1218,6 +1226,7 @@ def main():
     if "user_vars" not in config.keys():
         config["user_vars"] = dict()
     config["user_vars"]["profile"] = sys.argv[profile_pos]
+    config["user_vars"]["cwd"] = os.getcwd()
 
     # inject task keys, to allow alias jobs and multiple runs of the same thing
     for task_name in config.keys():
