@@ -680,6 +680,8 @@ def export_config_for_directory(task_name, directory):
 
 # apply config rules for file
 def apply_export_config_rules(export_config, task_name, filename):
+    if task_name not in export_config:
+        return None
     cfg = export_config[task_name]
     file_config = dict()
     for key in cfg.keys():
@@ -704,7 +706,7 @@ def export_config_for_file(task_name, filename):
     return file_config
 
 
-# expand args evaluating %{input_file}, %{output_file} and %{export_args}
+# expand args evaluating %{input_file}, %{output_file} and %{export_args} returns None, if export args are expect but missing
 def expand_args(args, config, task_name, input_file, output_file):
     cmd = ""
     for arg in args:
@@ -714,6 +716,8 @@ def expand_args(args, config, task_name, input_file, output_file):
         # expand args from export.jsn
         if arg.find("%{export_args}") != -1:
             export_config = export_config_for_file(task_name, input_file)
+            if not export_config:
+                return None
             arg = ""
             for export_arg in export_config.keys():
                 val = " " + str(export_config[export_arg])
@@ -752,7 +756,11 @@ def run_tool(config, task_name, tool, files):
     exe = util.sanitize_file_path(config["tools"][tool])
     for file in files:
         cmd = exe + " "
-        cmd += expand_args(config[task_name]["args"], config, task_name, file[0], file[1])
+        args = expand_args(config[task_name]["args"], config, task_name, file[0], file[1])
+        if not args:
+            print("[warning] missing export_args for " + file[0])
+            continue
+        cmd += args
         if len(file[1]) > 0:
             util.create_dir(file[1])
         if deps:
