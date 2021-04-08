@@ -472,7 +472,9 @@ def get_task_files_glob(files_task):
     for src in inputs:
         src_glob_pos = files_task[0].find("*")
         src_root = util.sanitize_file_path(files_task[0][:src_glob_pos - 1])
+        src_root = src_root.strip(os.sep)
         dst_root = util.sanitize_file_path(files_task[1])
+        dst_root = dst_root.strip(os.sep)
         src = util.sanitize_file_path(src)
         rp = src.find(src_root) + len(src_root)
         dst = src[:rp].replace(src_root, dst_root) + src[rp:]
