@@ -43,7 +43,7 @@ def correct_path(path):
 def sanitize_file_path(path):
     path = path.replace("/", os.sep)
     path = path.replace("\\", os.sep)
-    return os.path.normpath(path)
+    return path
 
 
 # gets platform correct extension for executable (.exe = windows, no ext linux/mac)
