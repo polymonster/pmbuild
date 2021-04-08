@@ -1142,8 +1142,20 @@ def main():
         print("[error] no config.jsn in current directory.")
         sys.exit(1)
 
+    # read jsn
+    config_jsn = open(config_file, "r").read()
+    start = config_jsn.find("{")
+    imports = config_jsn[:start]
+    config_jsn = config_jsn[start:]
+
+    # when running in exe mode imports must be next to the exe
+    if getattr(sys, 'frozen', False):
+        exe_path = os.path.dirname(sys.executable)
+        print(exe_path)
+        imports = "import " + os.path.join(exe_path, "fwbuild_init.jsn")
+
     # load jsn, inherit etc
-    config_all = jsn.loads(open(config_file, "r").read())
+    config_all = jsn.loads(imports + config_jsn)
 
     # special args passed from user
     special_args = [
