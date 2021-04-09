@@ -1145,14 +1145,22 @@ def main():
     # read jsn
     config_jsn = open(config_file, "r").read()
     start = config_jsn.find("{")
-    imports = config_jsn[:start]
+    all_imports = config_jsn[:start].split("\n")
     config_jsn = config_jsn[start:]
 
-    # when running in exe mode imports must be next to the exe
+    # when running in exe mode imports may differ
+    imports = ""
     if getattr(sys, 'frozen', False):
         exe_path = os.path.dirname(sys.executable)
-        print(exe_path)
-        imports = "import " + os.path.join(exe_path, "fwbuild_init.jsn")
+        for i in all_imports:
+            if i.find("import_frozen") != -1:
+                f = i[i.find("\"")+1:]
+                f = f.strip().strip("\"")
+                imports += "import \"" + os.path.join(exe_path, f) + "\"\n"
+    else:
+        for i in all_imports:
+            if i.find("import_frozen") == -1:
+                imports += i + "\n"
 
     # load jsn, inherit etc
     config_all = jsn.loads(imports + config_jsn)
