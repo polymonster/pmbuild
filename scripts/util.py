@@ -160,7 +160,8 @@ def print_header(task_name):
 def log_lvl(msg, config, verbosity=None):
     special_args = config["special_args"]
     if verbosity:
-        if "verbosity" in special_args:
+        if verbosity in special_args:
+            print(msg)
             return
         return
     if "-silent" not in special_args:

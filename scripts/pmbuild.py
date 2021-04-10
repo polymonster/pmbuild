@@ -807,6 +807,7 @@ def shell(config, task_name):
         error_exit(config)
     for cmd in commands:
         cmd = replace_user_vars(cmd, config)
+        util.log_lvl(cmd, config, "-verbose")
         p = subprocess.Popen(cmd, shell=True)
         e = p.wait()
         if e:
@@ -1050,7 +1051,7 @@ def pmbuild_help(config):
     print("    -ignore_errors (will not exit on error).")
     print("    -args (anything supplied after -args will be forwarded to tools and other scripts).")
     print("\nsettings:")
-    print("    pmbuild -credentials (creates a jsn file to allow input and encrytption of user names and passwords).")
+    print("    pmbuild -credentials (creates a jsn file to allow input and encryption of user names and passwords).")
     print_profiles(config)
 
 
@@ -1064,10 +1065,10 @@ def pmbuild_profile_help(config, build_order):
         print(" " * 8 + task)
 
 
-# build hekp for core tasks
+# build help for core tasks
 def core_help(config, taskname, task_type):
     if task_type == "copy" or task_type == "move":
-        print("spcify pairs of files or directories for copying/moving [src/input, dst/output]\n")
+        print("specify pairs of files or directories for copying/moving [src/input, dst/output]\n")
         print("files:[")
         print("    [files/in/directory, copy/to/directory]")
         print("    [files/with/glob/**/*.txt, copy/to/directory]")
@@ -1234,7 +1235,7 @@ def main():
         pmbuild_help(config_all)
         sys.exit(0)
 
-
+    # check special command modes
     command_mode = ["make", "launch"]
     for cm in command_mode:
         if cm in sys.argv:
@@ -1244,11 +1245,19 @@ def main():
 
     # load config user for user specific values (sdk version, vcvarsall.bat etc.)
     configure_user(config, sys.argv)
+
     # inserts profile
     if "user_vars" not in config.keys():
         config["user_vars"] = dict()
-    config["user_vars"]["profile"] = sys.argv[profile_pos]
-    config["user_vars"]["cwd"] = os.getcwd()
+
+    # final handling of invalid profiles
+    if profile_pos < len(sys.argv):
+        config["user_vars"]["profile"] = sys.argv[profile_pos]
+        config["user_vars"]["cwd"] = os.getcwd()
+    else:
+        print("[error] missing valid pmbuild profile as first positional argument")
+        print_profiles(config_all)
+        sys.exit(1)
 
     # inject task keys, to allow alias jobs and multiple runs of the same thing
     for task_name in config.keys():
@@ -1258,6 +1267,10 @@ def main():
 
     config["special_args"] = special_args
     config["user_args"] =  user_args
+
+    # verbosity indicator
+    util.log_lvl("pmbuild verbose:", config, "-verbose")
+    util.log_lvl(json.dumps(config["user_vars"], indent=4), config, "-verbose")
 
     # obtain tools for this platform
     config["tools"] = dict()

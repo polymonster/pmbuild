@@ -1,10 +1,10 @@
 # pmbuild
 
-A build system with a focus toward game development, it can be used to orchestrate multi platform build piplines to transform source assets (textures, shaders, models) into game ready formats, build code, deploy packages and run tests. pmbuild provides a framework to add new build tasks, integrate your own tools and reduce the amount of 'glue' code required to run various build steps.
+A build system with a focus toward game development, it can be used to orchestrate multi platform build pipelines to transform source assets (textures, shaders, models) into game ready formats, build code, deploy packages and run tests. pmbuild provides a framework to add new build tasks, integrate your own tools and reduce the amount of 'glue' code required to run various build steps.
 
-It is designed to be run locally to deploy to devkits or build code to run tests from the commandline but you can also use pmbuild in CI services to reduce the amount of code required in your CI system and so that local users have the same system to build and test with.
+It is designed to be run locally to deploy to devkits or build code to run tests from the command line but you can also use pmbuild in CI services to reduce the amount of code required in your CI system and so that local users have the same system to build and test with.
 
-It is not a replacement for msbuild, xcodebuild, cmake or other tools. pmbuild is designed to use other build and pre-build systems and the pmbuild system simply provides tools and infrasturcture to help.
+It is not a replacement for msbuild, xcodebuild, cmake or other tools. pmbuild is designed to use other build and pre-build systems and the pmbuild system simply provides tools and infrastructure to help.
 
 Checkout the live demo [video](https://youtu.be/L-wPJXZ_oDA) to see it in action.  
 
@@ -68,7 +68,7 @@ pmbuild <profile> <tasks...>
 # builds code with xcodebuild, msbuild, makesfiles + clang... configure your own toolchains
 pmbuild make <profile> <args...>
 
-# launch built executables to run tests, pass "all" to run all built exe's in a directoru
+# launch built executables to run tests, pass "all" to run all built exe's in a directory
 pmbuild launch <profile> <args...>
 ```
 
@@ -142,7 +142,7 @@ options:
     -args (anything supplied after -args will be forwarded to tools and other scripts).
 
 settings:
-    pmbuild -credentials (creates a jsn file to allow input and encrytption of user names and passwords).
+    pmbuild -credentials (creates a jsn file to allow input and encryption of user names and passwords).
 
 profiles:
     config.jsn (edit task settings or add profiles in here)
@@ -185,7 +185,7 @@ pmbuild <profile> -<task> -help
 
 # Variables and Inheritence
 
-jsn allows inheritence and variables `${variable}` evaluated with dollar sign where variables are defined in the script. This allows sharing and re-use of tasks to make configs more compact.
+jsn allows inheritance and variables `${variable}` evaluated with dollar sign where variables are defined in the script. This allows sharing and re-use of tasks to make configs more compact.
 
 ```yaml
 {
@@ -205,14 +205,16 @@ jsn allows inheritence and variables `${variable}` evaluated with dollar sign wh
 
 # Special Variables
 
-pmbuild also provides some special `%{variables}` evaluated with percentage sign these are evaulated at runtime, configurable per user and stored in `config.user.jsn`.
+pmbuild also provides special variables evaluated with percentage sign as so `%{variable_name}` these are evaluated at runtime, configurable per user and stored in `config.user.jsn` in addition to supplying your own user args there are some built in ones as well:
 
 ```
 %{vs_latest} = locates the latest installation of visual studio ie (vs2019)
-%{windows_sdk_version} = windows sdk version
+%{windows_sdk_version} = finds latest windows sdk version
 %{input_file} = input file from "files" object
 %{output_file} = output file from "files" object
 %{export_args} = arguments per file from export.jsn
+%{cwd} = current working directory
+%{teamid} = apple developer team id (will prompt for input if not present)
 ```
 
 # Copy
@@ -241,7 +243,7 @@ copy-wildcards:
     ]
 }
 
-// copies with a regex match and an array of regex sub finding files containing "matchfile", chaning the output directory and file type
+// copies with a regex match and an array of regex sub finding files containing "matchfile", changing the output directory and file type
 copy-regex:
 {
     type: copy
@@ -400,7 +402,7 @@ You can use `export.jsn` files in data directories to specify per directory or p
 }
 ```
 
-You can specify `rules` which select files and apply different settings. jsn inheritence is used here so you can override or inherit the base settings:
+You can specify `rules` which select files and apply different settings. jsn inheritance is used here so you can override or inherit the base settings:
 
 ```yaml
 {
@@ -556,7 +558,7 @@ launch: {
 
 # Network Connections / Credentials
 
-In a development environment we may need to synchronise large amounts of data which is stored on a server, or we may need to build artifacts to a server or deploy to a dev kit. we can mount connections to local area network connections via smb. You can supply credentials for the network connects in plain text, or encrypt them with crytographic quality encryption to be stored and accessed with a password.
+In a development environment we may need to synchronise large amounts of data which is stored on a server, or we may need to build artifacts to a server or deploy to a dev kit. we can mount connections to local area network connections via smb. You can supply credentials for the network connects in plain text, or encrypt them with cryptographic quality encryption to be stored and accessed with a password.
 
 To use encrypted credentials you need to install the python cryptography module:
 
@@ -603,7 +605,7 @@ A file `credentials.unlocked.jsn` will be generated in the current working direc
 
 # Explicit Tasks
 
-Tasks can be marked as explicit so that you must specify `-<task_name>` from the commandline and they do not get included automatically with `-all`. This is useful if you have build tasks which you may only need to run infrequently and take a long time to complete. Building third party librariess which are updated infreqently is an example where this can be useful:
+Tasks can be marked as explicit so that you must specify `-<task_name>` from the commandline and they do not get included automatically with `-all`. This is useful if you have build tasks which you may only need to run infrequently and take a long time to complete. Building third party libraries which are updated infrequently is an example where this can be useful:
 
 ```yaml
 libs: {
@@ -620,7 +622,7 @@ libs: {
 
 # Build Order
 
-By default tasks are built in the order they are specified in the config.jsn files. When using jsn inheritence it may not be clear what the build order might be or you may want to specify an explicit build order. You can do this using the `build_order` lists.
+By default tasks are built in the order they are specified in the config.jsn files. When using jsn inheritance it may not be clear what the build order might be or you may want to specify an explicit build order. You can do this using the `build_order` lists.
 
 ```yaml
 pre_build_order: [
@@ -657,7 +659,7 @@ vscode: {
         "."
         ".."
     ]
-    // array of configurations with pmbuild make, and a luanch command, %{target_name} is the basename of the xcodeproj or vcxproj
+    // array of configurations with pmbuild make, and a launch command, %{target_name} is the basename of the xcodeproj or vcxproj
     configurations:[
         {
             name: "debug"
