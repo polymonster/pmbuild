@@ -366,8 +366,6 @@ def configure_user(config, args):
             locate_vs_latest(config_user["user_vars"])
             configure_vc_vars_all(config_user["user_vars"])
             configure_windows_sdk(config_user["user_vars"])
-            util.log_lvl(config_user["vs_latest"], config, "-verbose")
-            util.log_lvl(config_user["windows_sdk"], config, "-verbose")
     if os.path.exists("config.user.jsn"):
         config_user = jsn.loads(open("config.user.jsn", "r").read())
         util.merge_dicts(config, config_user)
@@ -1233,6 +1231,7 @@ def main():
 
     # verbosity indicator
     util.log_lvl("pmbuild verbose:", config, "-verbose")
+    util.log_lvl(json.dumps(config["user_vars"], indent=4), config, "-verbose")
 
     # obtain tools for this platform
     config["tools"] = dict()
