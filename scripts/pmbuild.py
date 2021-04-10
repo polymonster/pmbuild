@@ -472,7 +472,9 @@ def get_task_files_glob(files_task):
     for src in inputs:
         src_glob_pos = files_task[0].find("*")
         src_root = util.sanitize_file_path(files_task[0][:src_glob_pos - 1])
+        src_root = src_root.strip(os.sep)
         dst_root = util.sanitize_file_path(files_task[1])
+        dst_root = dst_root.strip(os.sep)
         src = util.sanitize_file_path(src)
         rp = src.find(src_root) + len(src_root)
         dst = src[:rp].replace(src_root, dst_root) + src[rp:]
@@ -680,6 +682,8 @@ def export_config_for_directory(task_name, directory):
 
 # apply config rules for file
 def apply_export_config_rules(export_config, task_name, filename):
+    if task_name not in export_config:
+        return None
     cfg = export_config[task_name]
     file_config = dict()
     for key in cfg.keys():
@@ -704,7 +708,28 @@ def export_config_for_file(task_name, filename):
     return file_config
 
 
-# expand args evaluating %{input_file}, %{output_file} and %{export_args}
+# replaces user vars %{var}
+def replace_user_vars(arg, config):
+    # replace user_vars
+    user_vars = [
+        "vs_latest",
+        "windows_sdk_version",
+        "teamid",
+        "cwd"
+    ]
+    for uv in user_vars:
+        v = "%{" + uv + "}"
+        if arg.find(v) != -1:
+            if uv == "teamid":
+                configure_teamid(config)
+            if uv not in config["user_vars"]:
+                print("[error] missing variable " + uv)
+                error_exit(config)
+            arg = arg.replace(v, config["user_vars"][uv])
+    return arg
+
+
+# expand args evaluating %{input_file}, %{output_file} and %{export_args} returns None, if export args are expect but missing
 def expand_args(args, config, task_name, input_file, output_file):
     cmd = ""
     for arg in args:
@@ -714,6 +739,8 @@ def expand_args(args, config, task_name, input_file, output_file):
         # expand args from export.jsn
         if arg.find("%{export_args}") != -1:
             export_config = export_config_for_file(task_name, input_file)
+            if not export_config:
+                return None
             arg = ""
             for export_arg in export_config.keys():
                 val = " " + str(export_config[export_arg])
@@ -724,21 +751,7 @@ def expand_args(args, config, task_name, input_file, output_file):
                         val = ""
                 arg += export_arg + val + " "
             arg = arg.strip()
-        # replace user_vars
-        user_vars = [
-            "vs_latest",
-            "windows_sdk_version",
-            "teamid"
-        ]
-        for uv in user_vars:
-            v = "%{" + uv + "}"
-            if arg.find(v) != -1:
-                if uv == "teamid":
-                    configure_teamid(config)
-                if uv not in config["user_vars"]:
-                    print("[error] missing variable " + uv)
-                    error_exit(config)
-                arg = arg.replace(v, config["user_vars"][uv])
+        arg = replace_user_vars(arg, config)
         cmd += arg + " "
     for arg in config["user_args"]:
         cmd += arg + " "
@@ -752,7 +765,11 @@ def run_tool(config, task_name, tool, files):
     exe = util.sanitize_file_path(config["tools"][tool])
     for file in files:
         cmd = exe + " "
-        cmd += expand_args(config[task_name]["args"], config, task_name, file[0], file[1])
+        args = expand_args(config[task_name]["args"], config, task_name, file[0], file[1])
+        if not args:
+            print("[warning] missing export_args for " + file[0])
+            continue
+        cmd += args
         if len(file[1]) > 0:
             util.create_dir(file[1])
         if deps:
@@ -789,6 +806,7 @@ def shell(config, task_name):
         print("[error] shell must be array of strings")
         error_exit(config)
     for cmd in commands:
+        cmd = replace_user_vars(cmd, config)
         util.log_lvl(cmd, config, "-verbose")
         p = subprocess.Popen(cmd, shell=True)
         e = p.wait()
@@ -1125,8 +1143,28 @@ def main():
         print("[error] no config.jsn in current directory.")
         sys.exit(1)
 
+    # read jsn
+    config_jsn = open(config_file, "r").read()
+    start = config_jsn.find("{")
+    all_imports = config_jsn[:start].split("\n")
+    config_jsn = config_jsn[start:]
+
+    # when running in exe mode imports may differ
+    imports = ""
+    if getattr(sys, 'frozen', False):
+        exe_path = os.path.dirname(sys.executable)
+        for i in all_imports:
+            if i.find("import_frozen") != -1:
+                f = i[i.find("\"")+1:]
+                f = f.strip().strip("\"")
+                imports += "import \"" + os.path.join(exe_path, f) + "\"\n"
+    else:
+        for i in all_imports:
+            if i.find("import_frozen") == -1:
+                imports += i + "\n"
+
     # load jsn, inherit etc
-    config_all = jsn.loads(open(config_file, "r").read())
+    config_all = jsn.loads(imports + config_jsn)
 
     # special args passed from user
     special_args = [
@@ -1211,10 +1249,11 @@ def main():
     # inserts profile
     if "user_vars" not in config.keys():
         config["user_vars"] = dict()
-    
+
     # final handling of invalid profiles
     if profile_pos < len(sys.argv):
         config["user_vars"]["profile"] = sys.argv[profile_pos]
+        config["user_vars"]["cwd"] = os.getcwd()
     else:
         print("[error] missing valid pmbuild profile as first positional argument")
         print_profiles(config_all)
