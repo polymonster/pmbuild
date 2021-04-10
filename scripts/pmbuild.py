@@ -366,6 +366,8 @@ def configure_user(config, args):
             locate_vs_latest(config_user["user_vars"])
             configure_vc_vars_all(config_user["user_vars"])
             configure_windows_sdk(config_user["user_vars"])
+            util.log_lvl(config_user["vs_latest"], config, "-verbose")
+            util.log_lvl(config_user["windows_sdk"], config, "-verbose")
     if os.path.exists("config.user.jsn"):
         config_user = jsn.loads(open("config.user.jsn", "r").read())
         util.merge_dicts(config, config_user)
@@ -1032,7 +1034,7 @@ def pmbuild_help(config):
     print("    -ignore_errors (will not exit on error).")
     print("    -args (anything supplied after -args will be forwarded to tools and other scripts).")
     print("\nsettings:")
-    print("    pmbuild -credentials (creates a jsn file to allow input and encrytption of user names and passwords).")
+    print("    pmbuild -credentials (creates a jsn file to allow input and encryption of user names and passwords).")
     print_profiles(config)
 
 
@@ -1046,10 +1048,10 @@ def pmbuild_profile_help(config, build_order):
         print(" " * 8 + task)
 
 
-# build hekp for core tasks
+# build help for core tasks
 def core_help(config, taskname, task_type):
     if task_type == "copy" or task_type == "move":
-        print("spcify pairs of files or directories for copying/moving [src/input, dst/output]\n")
+        print("specify pairs of files or directories for copying/moving [src/input, dst/output]\n")
         print("files:[")
         print("    [files/in/directory, copy/to/directory]")
         print("    [files/with/glob/**/*.txt, copy/to/directory]")
@@ -1196,7 +1198,7 @@ def main():
         pmbuild_help(config_all)
         sys.exit(0)
 
-
+    # check special command modes
     command_mode = ["make", "launch"]
     for cm in command_mode:
         if cm in sys.argv:
@@ -1206,10 +1208,18 @@ def main():
 
     # load config user for user specific values (sdk version, vcvarsall.bat etc.)
     configure_user(config, sys.argv)
+
     # inserts profile
     if "user_vars" not in config.keys():
         config["user_vars"] = dict()
-    config["user_vars"]["profile"] = sys.argv[profile_pos]
+    
+    # final handling of invalid profiles
+    if profile_pos < len(sys.argv):
+        config["user_vars"]["profile"] = sys.argv[profile_pos]
+    else:
+        print("[error] missing valid pmbuild profile as first positional argument")
+        print_profiles(config_all)
+        sys.exit(1)
 
     # inject task keys, to allow alias jobs and multiple runs of the same thing
     for task_name in config.keys():
@@ -1219,6 +1229,9 @@ def main():
 
     config["special_args"] = special_args
     config["user_args"] =  user_args
+
+    # verbosity indicator
+    util.log_lvl("pmbuild verbose:", config, "-verbose")
 
     # obtain tools for this platform
     config["tools"] = dict()
