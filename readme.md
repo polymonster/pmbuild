@@ -205,14 +205,16 @@ jsn allows inheritence and variables `${variable}` evaluated with dollar sign wh
 
 # Special Variables
 
-pmbuild also provides some special `%{variables}` evaluated with percentage sign these are evaulated at runtime, configurable per user and stored in `config.user.jsn`.
+pmbuild also provides special variables evaluated with percentage sign as so `%{variable_name}` these are evaulated at runtime, configurable per user and stored in `config.user.jsn` in addition to supplying your own user args there are some built in ones as well:
 
 ```
 %{vs_latest} = locates the latest installation of visual studio ie (vs2019)
-%{windows_sdk_version} = windows sdk version
+%{windows_sdk_version} = finds latest windows sdk version
 %{input_file} = input file from "files" object
 %{output_file} = output file from "files" object
 %{export_args} = arguments per file from export.jsn
+%{cwd} = current working directory
+%{teamid} = apple developer team id (will prompt for input if not present)
 ```
 
 # Copy
