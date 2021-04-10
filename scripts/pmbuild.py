@@ -791,6 +791,7 @@ def shell(config, task_name):
         print("[error] shell must be array of strings")
         error_exit(config)
     for cmd in commands:
+        util.log_lvl(cmd, config, "-verbose")
         p = subprocess.Popen(cmd, shell=True)
         e = p.wait()
         if e:
