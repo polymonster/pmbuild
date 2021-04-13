@@ -1251,6 +1251,12 @@ def main():
     if "user_vars" not in config.keys():
         config["user_vars"] = dict()
 
+    # search paths for helping locate modules
+    if "search_paths" in config.keys():
+        for path in config["search_paths"]:
+            sys.path.append(path)
+        config.pop("search_paths")
+
     # final handling of invalid profiles
     if profile_pos < len(sys.argv):
         config["user_vars"]["profile"] = sys.argv[profile_pos]
@@ -1311,8 +1317,11 @@ def main():
                 ext = config_all["extensions"][ext_name]
                 if "search_path" in ext.keys():
                     sys.path.append(ext["search_path"])
-                ext_module = importlib.import_module(ext["module"])
-                scripts[ext_name] = getattr(ext_module, ext["function"])
+                try:
+                    ext_module = importlib.import_module(ext["module"])
+                    scripts[ext_name] = getattr(ext_module, ext["function"])
+                except:
+                    print("[warning] missing module " + json.dumps(ext, indent=4))
 
         # cleans are special operations which runs first
         if "-clean" in special_args:
