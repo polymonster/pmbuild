@@ -433,7 +433,8 @@ def zip(config, task_name, files):
     for dst in unique_zips.keys():
         zloc = os.path.splitext(os.path.basename(dst))[0]
         dir = os.path.dirname(dst)
-        util.create_dir(dir)
+        os.makedirs(dir, exist_ok=True)
+        # util.create_dir(dir)
         with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zip:
             for file in unique_zips[dst]:
                 print("zip " + file)
