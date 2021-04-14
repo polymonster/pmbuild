@@ -1050,6 +1050,7 @@ def pmbuild_help(config):
     print("    -cfg (print jsn config for current profile).")
     print("    -verbose (print more).")
     print("    -ignore_errors (will not exit on error).")
+    print("    -vars <string of jsn> (added to user_vars ie. \"var_bool: true, var_int: 1, var_obj:{key: value}\").")
     print("    -args (anything supplied after -args will be forwarded to tools and other scripts).")
     print("\nsettings:")
     print("    pmbuild -credentials (creates a jsn file to allow input and encryption of user names and passwords).")
@@ -1319,7 +1320,8 @@ def main():
         "shell": shell,
         "zip": zip,
         "pmbuild_config": generate_pmbuild_config,
-        "vscode": vscode_build
+        "vscode": vscode_build,
+        "delete_orphans": dependencies.delete_orphans
     }
 
     if sys.argv[1] == "make":
