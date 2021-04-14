@@ -433,7 +433,8 @@ def zip(config, task_name, files):
     for dst in unique_zips.keys():
         zloc = os.path.splitext(os.path.basename(dst))[0]
         dir = os.path.dirname(dst)
-        util.create_dir(dir)
+        os.makedirs(dir, exist_ok=True)
+        # util.create_dir(dir)
         with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zip:
             for file in unique_zips[dst]:
                 print("zip " + file)
@@ -1049,6 +1050,7 @@ def pmbuild_help(config):
     print("    -cfg (print jsn config for current profile).")
     print("    -verbose (print more).")
     print("    -ignore_errors (will not exit on error).")
+    print("    -vars <string of jsn> (added to user_vars ie. \"var_bool: true, var_int: 1, var_obj:{key: value}\").")
     print("    -args (anything supplied after -args will be forwarded to tools and other scripts).")
     print("\nsettings:")
     print("    pmbuild -credentials (creates a jsn file to allow input and encryption of user names and passwords).")
@@ -1191,6 +1193,20 @@ def main():
     if len(sys.argv) == 2 and profile_pos == 1:
         implicit_all = True
 
+    # extract vars
+    commandline_vars = dict()
+    rm = []
+    for a in range(0, len(sys.argv)):
+        if sys.argv[a] == "-vars":
+            if a + 1 > len(sys.argv):
+                print("[error] -vars requires a string of key value pairs")
+                sys.exit(0)
+            j = jsn.loads("{" + sys.argv[a+1] + "}")
+            for key in j.keys():
+                commandline_vars[key] = j[key]
+            rm.append(a)
+            rm.append(a+1)
+    
     # extract extra -args
     user_args = []
     if "-args" in sys.argv:
@@ -1250,6 +1266,16 @@ def main():
     if "user_vars" not in config.keys():
         config["user_vars"] = dict()
 
+    # add commandline vars
+    for v in commandline_vars.keys():
+        config["user_vars"][v] = commandline_vars[v]
+
+    # search paths for helping locate modules
+    if "search_paths" in config.keys():
+        for path in config["search_paths"]:
+            sys.path.append(path)
+        config.pop("search_paths")
+
     # final handling of invalid profiles
     if profile_pos < len(sys.argv):
         config["user_vars"]["profile"] = sys.argv[profile_pos]
@@ -1269,7 +1295,7 @@ def main():
     config["user_args"] =  user_args
 
     # verbosity indicator
-    util.log_lvl("pmbuild verbose:", config, "-verbose")
+    util.log_lvl("user_vars:", config, "-verbose")
     util.log_lvl(json.dumps(config["user_vars"], indent=4), config, "-verbose")
 
     # obtain tools for this platform
@@ -1294,7 +1320,8 @@ def main():
         "shell": shell,
         "zip": zip,
         "pmbuild_config": generate_pmbuild_config,
-        "vscode": vscode_build
+        "vscode": vscode_build,
+        "delete_orphans": dependencies.delete_orphans
     }
 
     if sys.argv[1] == "make":
@@ -1310,8 +1337,11 @@ def main():
                 ext = config_all["extensions"][ext_name]
                 if "search_path" in ext.keys():
                     sys.path.append(ext["search_path"])
-                ext_module = importlib.import_module(ext["module"])
-                scripts[ext_name] = getattr(ext_module, ext["function"])
+                try:
+                    ext_module = importlib.import_module(ext["module"])
+                    scripts[ext_name] = getattr(ext_module, ext["function"])
+                except:
+                    print("[warning] missing module " + json.dumps(ext, indent=4))
 
         # cleans are special operations which runs first
         if "-clean" in special_args:

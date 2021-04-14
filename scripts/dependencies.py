@@ -203,3 +203,30 @@ def write_to_file_single(deps, file):
     output_d = open(file, 'wb+')
     output_d.write(bytes(json.dumps(deps, indent=4), 'UTF-8'))
     output_d.close()
+
+
+# checks if the source file exists and deletes the transcoded / converted version
+def delete_orphans(config, task_name, files):
+    for f in files:
+        d_json = json.loads(open(f[0], "r").read())
+        dep_files = d_json["files"]
+        del_count = 0
+        check_count = 0
+        for output in dep_files:
+            for i in dep_files[output]:
+                check_count = check_count + 1
+                if not os.path.exists(i["name"]):
+                    print("orphan file: " + f[0])
+                    if "delete_orphans" in config["user_vars"]:
+                        if config["user_vars"]["delete_orphans"]:
+                            del_count = del_count + 1
+                            if os.path.exists(i["data_file"]):
+                                print("delete orphan file: " + i["data_file"])
+                                os.remove(i["data_file"])
+        if del_count == check_count:
+            print("delete orphan dep: " + f[0])
+            os.remove(f[0])
+
+
+
+        

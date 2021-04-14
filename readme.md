@@ -139,6 +139,7 @@ options:
     -cfg (print jsn config for current profile).
     -verbose (print more).
     -ignore_errors (will not exit on error).
+    -vars <string of jsn> (added to user_vars ie. "var_bool: true, var_int: 1, var_obj:{key: value}").
     -args (anything supplied after -args will be forwarded to tools and other scripts).
 
 settings:
@@ -203,18 +204,25 @@ jsn allows inheritance and variables `${variable}` evaluated with dollar sign wh
 }
 ```
 
-# Special Variables
+# Special / User Variables
 
 pmbuild also provides special variables evaluated with percentage sign as so `%{variable_name}` these are evaluated at runtime, configurable per user and stored in `config.user.jsn` in addition to supplying your own user args there are some built in ones as well:
 
 ```
-%{vs_latest} = locates the latest installation of visual studio ie (vs2019)
-%{windows_sdk_version} = finds latest windows sdk version
+%{profile} = current building profile (ie mac, win32, linux etc)
+%{cwd} = current working directory
 %{input_file} = input file from "files" object
 %{output_file} = output file from "files" object
 %{export_args} = arguments per file from export.jsn
-%{cwd} = current working directory
+%{vs_latest} = locates the latest installation of visual studio ie (vs2019)
+%{windows_sdk_version} = finds latest windows sdk version
 %{teamid} = apple developer team id (will prompt for input if not present)
+```
+
+You can also pass `-vars` to pmbuild from the commandline as a string of jsn:
+
+```
+pmbuild profile -vars "var_bool: true, var_int: 1, var_string:'test', var_obj:{key: value}"
 ```
 
 # Copy
