@@ -1,4 +1,5 @@
 import os
+import shutil
 import json
 import util
 import pmbuild
@@ -220,9 +221,12 @@ def delete_orphans(config, task_name, files):
                     if "delete_orphans" in config["user_vars"]:
                         if config["user_vars"]["delete_orphans"]:
                             del_count = del_count + 1
-                            if os.path.exists(i["data_file"]):
-                                print("delete orphan file: " + i["data_file"])
-                                os.remove(i["data_file"])
+                            if os.path.exists(output):
+                                print("delete orphan file: " + output)
+                                if os.path.isdir(output):
+                                    shutil.rmtree(output)
+                                else:
+                                    os.remove(output)
         if del_count == check_count:
             print("delete orphan dep: " + f[0])
             os.remove(f[0])
