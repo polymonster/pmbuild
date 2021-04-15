@@ -24,6 +24,8 @@ Examples of working [scripts](https://github.com/polymonster/pmtech/blob/master/
 ### Built-in Tasks
 - copy (copy files from src to dst with single files, folders, globs or regex)
 - clean (delete intermediate files)
+- dependencies (track modified times, inouts and output to prevent redundant work)
+- delete_orphans (deletes files which no longer have a source parent in dependencies)
 - connect (smb network connections with credentials)
 - zip (zip or unzip files)
 - premake (generate visual studio solutions, xcode workspace, makefiles, android studio projects)
