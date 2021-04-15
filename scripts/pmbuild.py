@@ -579,12 +579,12 @@ def filter_files(config, task_name, files):
                     fn = os.path.join(directory, f)
                     newest = max(os.path.getmtime(fn), newest)
                 built = 0
-                if os.path.exists(container_file):
-                    current_files = open(container_file, "r").read()
-                    built = os.path.getmtime(container_file)
-                if current_files != container_files or newest > built:
-                    open(container_file, "w+").write(container_files)
                 if containers:
+                    if os.path.exists(container_file):
+                        current_files = open(container_file, "r").read()
+                        built = os.path.getmtime(container_file)
+                    if current_files != container_files or newest > built:
+                        open(container_file, "w+").write(container_files)
                     lookups[container_file] = (container_file, dest_file)
     pairs = []
     for f in lookups.keys():
