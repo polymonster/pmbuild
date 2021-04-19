@@ -147,6 +147,9 @@ def check_up_to_date_single(dest_file, deps):
     if not os.path.exists(dep_filename):
         print("new file: " + os.path.basename(dest_file))
         return False
+    if not os.path.exists(dest_file):
+        print("new file:" + os.path.basename(dest_file))
+        return False
     dep_ts = os.path.getmtime(dest_file)
     file = open(dep_filename)
     d_str = file.read()
