@@ -24,7 +24,7 @@ def delete_orphaned_files(build_dir, platform_data_dir):
                                 del_path = os.path.join(platform_data_dir, key)
                                 if os.path.exists(del_path):
                                     os.remove(os.path.join(platform_data_dir, key))
-                                    print("deleting " + key + " source file no longer exists")
+                                    print("deleting " + key + " source file no longer exists", flush=True)
                                     print(del_path)
                                     break
 
@@ -145,10 +145,10 @@ def create_dependency_single(input, output, cmdline=""):
 def check_up_to_date_single(dest_file, deps):
     dep_filename = util.change_ext(dest_file, ".dep")
     if not os.path.exists(dep_filename):
-        print("new file: " + os.path.basename(dest_file))
+        print("new file: " + os.path.basename(dest_file), flush=True)
         return False
     if not os.path.exists(dest_file):
-        print("new file:" + os.path.basename(dest_file))
+        print("new file:" + os.path.basename(dest_file), flush=True)
         return False
     dep_ts = os.path.getmtime(dest_file)
     file = open(dep_filename)
@@ -157,7 +157,7 @@ def check_up_to_date_single(dest_file, deps):
     # check for changes to cmdline
     if "cmdline" in deps:
         if "cmdline" not in d_json.keys() or deps["cmdline"] != d_json["cmdline"]:
-            print(dest_file + " cmdline changed")
+            print(dest_file + " cmdline changed", flush=True)
             return False
     # check multi cmdlines
     if "cmdlines" in deps:
@@ -173,7 +173,7 @@ def check_up_to_date_single(dest_file, deps):
     for output in deps["files"]:
         for i in deps["files"][output]:
             if i["name"] not in dep_files:
-                print(os.path.basename(dest_file) + ": has new inputs")
+                print(os.path.basename(dest_file) + ": has new inputs", flush=True)
                 return False
     # check for timestamps on existing
     for d in d_json["files"]:
@@ -181,13 +181,13 @@ def check_up_to_date_single(dest_file, deps):
         for input_file in d_json["files"][d]:
             # output file does not exist yet
             if not os.path.exists(dest_file):
-                print("new file: " + os.path.basename(dest_file))
+                print("new file: " + os.path.basename(dest_file), flush=True)
                 return False
             # output file is out of date
             if os.path.getmtime(input_file["name"]) > dep_ts:
-                print(os.path.basename(dest_file) + ": is out-of-date.")
+                print(os.path.basename(dest_file) + ": is out-of-date.", flush=True)
                 return False
-    print(os.path.basename(dest_file) + ": up-to-date")
+    print(os.path.basename(dest_file) + ": up-to-date", flush=True)
     return True
 
 
