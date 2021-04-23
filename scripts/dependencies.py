@@ -209,27 +209,52 @@ def write_to_file_single(deps, file):
     output_d.close()
 
 
+# delete single orphan
+def delete_orphan(file):
+    if os.path.exists(file):
+        print("delete orphan file: " + file)
+        if os.path.isdir(file):
+            shutil.rmtree(file)
+        else:
+            os.remove(file)
+
+
 # checks if the source file exists and deletes the transcoded / converted version
 def delete_orphans(config, task_name, files):
+    perform_delete = util.value_with_default("delete_orphans", config["user_vars"], False)
     for f in files:
         d_json = json.loads(open(f[0], "r").read())
         dep_files = d_json["files"]
         del_count = 0
         check_count = 0
+        basenames = []
+        basename_strip = []
+        # check dependencies to see if src files still exist
         for output in dep_files:
             for i in dep_files[output]:
                 check_count = check_count + 1
+                bn = os.path.basename(i["data_file"])
+                basenames.append(bn)
+                basename_strip.append(os.path.splitext(bn)[0])
                 if not os.path.exists(i["name"]):
                     print("orphan file: " + f[0])
-                    if "delete_orphans" in config["user_vars"]:
-                        if config["user_vars"]["delete_orphans"]:
-                            del_count = del_count + 1
-                            if os.path.exists(output):
-                                print("delete orphan file: " + output)
-                                if os.path.isdir(output):
-                                    shutil.rmtree(output)
-                                else:
-                                    os.remove(output)
+                    if perform_delete:
+                        del_count = del_count + 1
+                        delete_orphan(output)
+        # check files which have may have changed ext and alias the same dep
+        dirname = os.path.dirname(f[0])
+        dir_list = os.listdir(dirname)
+        for ff in dir_list:
+            if ff.endswith(".dep"):
+                continue
+            bn = os.path.basename(ff)
+            bns = os.path.splitext(bn)[0]
+            if bns in basename_strip:
+                if bn not in basenames:
+                    print("orphan file dst changed: " + ff + " to " + str(basenames))
+                    if perform_delete:
+                        delete_orphan(os.path.join(dirname, ff))
+        # delete dependency file itself if we remove all outputs
         if del_count == check_count:
             print("delete orphan dep: " + f[0])
             os.remove(f[0])
