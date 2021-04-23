@@ -223,6 +223,8 @@ def delete_orphan(file):
 def delete_orphans(config, task_name, files):
     perform_delete = util.value_with_default("delete_orphans", config["user_vars"], False)
     for f in files:
+        if not os.path.exists(f[0]):
+            continue
         d_json = json.loads(open(f[0], "r").read())
         dep_files = d_json["files"]
         del_count = 0
