@@ -72,14 +72,14 @@ def create_dir(dst_file):
 # copy src_file to dst_file creating directory if necessary
 def copy_file_create_dir(src_file, dst_file):
     if not os.path.exists(src_file):
-        print("[error] " + src_file + " does not exist!")
+        print("[error] " + src_file + " does not exist!", flush=True)
         return False
     try:
         create_dir(dst_file)
         src_file = os.path.normpath(src_file)
         dst_file = os.path.normpath(dst_file)
         shutil.copyfile(src_file, dst_file)
-        print("copy " + src_file + " to " + dst_file)
+        print("copy " + src_file + " to " + dst_file, flush=True)
         return True
     except Exception as e:
         print("[error] failed to copy " + src_file)
@@ -89,7 +89,7 @@ def copy_file_create_dir(src_file, dst_file):
 # copy src_file to dst_file creating directory if necessary only if the src file is newer than dst
 def copy_file_create_dir_if_newer(src_file, dst_file):
     if not os.path.exists(src_file):
-        print("[error] src_file " + src_file + " does not exist!")
+        print("[error] src_file " + src_file + " does not exist!", flush=True)
         return
     if os.path.exists(dst_file):
         if os.path.getmtime(dst_file) >= os.path.getmtime(src_file):
@@ -144,16 +144,16 @@ def open_text_editor(file):
 # print duration of job, ts is start time
 def print_duration(ts):
     millis = int((time.time() - ts) * 1000)
-    print("--------------------------------------------------------------------------------")
+    print("--------------------------------------------------------------------------------", flush=True)
     print("pmbuild: All Jobs Complete (" + str(millis) + "ms)")
 
 
 # prints a header to clearly separate console output and to make build steps quick to find
 def print_header(task_name):
     padding = "-" * (79 - len(task_name))
-    print("--------------------------------------------------------------------------------")
-    print(task_name + " " + padding)
-    print("--------------------------------------------------------------------------------")
+    print("--------------------------------------------------------------------------------", flush=True)
+    print(task_name + " " + padding, flush=True)
+    print("--------------------------------------------------------------------------------", flush=True)
 
 
 # prints a message handling verbose only, or silent modes
