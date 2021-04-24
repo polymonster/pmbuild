@@ -24,7 +24,7 @@ def delete_orphaned_files(build_dir, platform_data_dir):
                                 del_path = os.path.join(platform_data_dir, key)
                                 if os.path.exists(del_path):
                                     os.remove(os.path.join(platform_data_dir, key))
-                                    print("deleting " + key + " source file no longer exists")
+                                    print("deleting " + key + " source file no longer exists", flush=True)
                                     print(del_path)
                                     break
 
@@ -145,7 +145,10 @@ def create_dependency_single(input, output, cmdline=""):
 def check_up_to_date_single(dest_file, deps):
     dep_filename = util.change_ext(dest_file, ".dep")
     if not os.path.exists(dep_filename):
-        print("new file: " + os.path.basename(dest_file))
+        print("new file: " + os.path.basename(dest_file), flush=True)
+        return False
+    if not os.path.exists(dest_file):
+        print("new file:" + os.path.basename(dest_file), flush=True)
         return False
     dep_ts = os.path.getmtime(dest_file)
     file = open(dep_filename)
@@ -154,7 +157,7 @@ def check_up_to_date_single(dest_file, deps):
     # check for changes to cmdline
     if "cmdline" in deps:
         if "cmdline" not in d_json.keys() or deps["cmdline"] != d_json["cmdline"]:
-            print(dest_file + " cmdline changed")
+            print(dest_file + " cmdline changed", flush=True)
             return False
     # check multi cmdlines
     if "cmdlines" in deps:
@@ -170,7 +173,7 @@ def check_up_to_date_single(dest_file, deps):
     for output in deps["files"]:
         for i in deps["files"][output]:
             if i["name"] not in dep_files:
-                print(os.path.basename(dest_file) + ": has new inputs")
+                print(os.path.basename(dest_file) + ": has new inputs", flush=True)
                 return False
     # check for timestamps on existing
     for d in d_json["files"]:
@@ -178,13 +181,13 @@ def check_up_to_date_single(dest_file, deps):
         for input_file in d_json["files"][d]:
             # output file does not exist yet
             if not os.path.exists(dest_file):
-                print("new file: " + os.path.basename(dest_file))
+                print("new file: " + os.path.basename(dest_file), flush=True)
                 return False
             # output file is out of date
             if os.path.getmtime(input_file["name"]) > dep_ts:
-                print(os.path.basename(dest_file) + ": is out-of-date.")
+                print(os.path.basename(dest_file) + ": is out-of-date.", flush=True)
                 return False
-    print(os.path.basename(dest_file) + ": up-to-date")
+    print(os.path.basename(dest_file) + ": up-to-date", flush=True)
     return True
 
 
@@ -206,27 +209,54 @@ def write_to_file_single(deps, file):
     output_d.close()
 
 
+# delete single orphan
+def delete_orphan(file):
+    if os.path.exists(file):
+        print("delete orphan file: " + file)
+        if os.path.isdir(file):
+            shutil.rmtree(file)
+        else:
+            os.remove(file)
+
+
 # checks if the source file exists and deletes the transcoded / converted version
 def delete_orphans(config, task_name, files):
+    perform_delete = util.value_with_default("delete_orphans", config["user_vars"], False)
     for f in files:
+        if not os.path.exists(f[0]):
+            continue
         d_json = json.loads(open(f[0], "r").read())
         dep_files = d_json["files"]
         del_count = 0
         check_count = 0
+        basenames = []
+        basename_strip = []
+        # check dependencies to see if src files still exist
         for output in dep_files:
             for i in dep_files[output]:
                 check_count = check_count + 1
+                bn = os.path.basename(i["data_file"])
+                basenames.append(bn)
+                basename_strip.append(os.path.splitext(bn)[0])
                 if not os.path.exists(i["name"]):
                     print("orphan file: " + f[0])
-                    if "delete_orphans" in config["user_vars"]:
-                        if config["user_vars"]["delete_orphans"]:
-                            del_count = del_count + 1
-                            if os.path.exists(output):
-                                print("delete orphan file: " + output)
-                                if os.path.isdir(output):
-                                    shutil.rmtree(output)
-                                else:
-                                    os.remove(output)
+                    if perform_delete:
+                        del_count = del_count + 1
+                        delete_orphan(output)
+        # check files which have may have changed ext and alias the same dep
+        dirname = os.path.dirname(f[0])
+        dir_list = os.listdir(dirname)
+        for ff in dir_list:
+            if ff.endswith(".dep"):
+                continue
+            bn = os.path.basename(ff)
+            bns = os.path.splitext(bn)[0]
+            if bns in basename_strip:
+                if bn not in basenames:
+                    print("orphan file dst changed: " + ff + " to " + str(basenames))
+                    if perform_delete:
+                        delete_orphan(os.path.join(dirname, ff))
+        # delete dependency file itself if we remove all outputs
         if del_count == check_count:
             print("delete orphan dep: " + f[0])
             os.remove(f[0])

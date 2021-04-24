@@ -1143,6 +1143,7 @@ def main():
     # must have config.json in working directory
     if not os.path.exists(config_file):
         print("[error] no config.jsn in current directory.")
+        print(sys.argv)
         sys.exit(1)
 
     # read jsn
@@ -1150,9 +1151,9 @@ def main():
     start = config_jsn.find("{")
     all_imports = config_jsn[:start].split("\n")
     config_jsn = config_jsn[start:]
-
-    # when running in exe mode imports may differ
     imports = ""
+            
+    # when running in exe mode imports may differ
     if getattr(sys, 'frozen', False):
         exe_path = os.path.dirname(sys.executable)
         for i in all_imports:
@@ -1199,7 +1200,7 @@ def main():
     for a in range(0, len(sys.argv)):
         if sys.argv[a] == "-vars":
             if a + 1 > len(sys.argv):
-                print("[error] -vars requires a string of key value pairs")
+                print("[error] -vars requires a string of key value pairs", flush=True)
                 sys.exit(0)
             j = jsn.loads("{" + sys.argv[a+1] + "}")
             for key in j.keys():
@@ -1235,7 +1236,7 @@ def main():
     profile = ""
     if profile_pos < len(sys.argv):
         if sys.argv[profile_pos] not in config_all:
-            print("[error] " + sys.argv[profile_pos] + " is not a valid pmbuild profile")
+            print("[error] " + sys.argv[profile_pos] + " is not a valid pmbuild profile", flush=True)
             print_profiles(config_all)
             sys.exit(1)
         profile = sys.argv[profile_pos]
@@ -1256,7 +1257,7 @@ def main():
     for cm in command_mode:
         if cm in sys.argv:
             if cm not in config.keys():
-                print("[error] " + cm + " is not configured in config.jsn (" + profile + ")")
+                print("[error] " + cm + " is not configured in config.jsn (" + profile + ")", flush=True)
                 error_exit(config)
 
     # load config user for user specific values (sdk version, vcvarsall.bat etc.)
@@ -1281,7 +1282,7 @@ def main():
         config["user_vars"]["profile"] = sys.argv[profile_pos]
         config["user_vars"]["cwd"] = os.getcwd()
     else:
-        print("[error] missing valid pmbuild profile as first positional argument")
+        print("[error] missing valid pmbuild profile as first positional argument", flush=True)
         print_profiles(config_all)
         sys.exit(1)
 
@@ -1306,9 +1307,9 @@ def main():
     if "tools_help" in config_all.keys():
         config["tools_help"] = config_all["tools_help"]
     if "-cfg" in special_args:
-        print(sys.argv)
-        print(special_args)
-        print(json.dumps(config, indent=4))
+        print(sys.argv, flush=True)
+        print(special_args, flush=True)
+        print(json.dumps(config, indent=4), flush=True)
 
     # core scripts
     scripts = {
