@@ -122,9 +122,14 @@ def value_with_default(key, dictionary, default_value):
 
 
 # returns list of files with full file path from recursive directory walk
-def walk(directory):
+def walk(directory, strip_dir=False):
     file_list = []
     for root, dirs, files in os.walk(directory):
+        if strip_dir:
+            root = root[len(directory):]
+            if root:
+                if root[0] == '\\' or root[0] == '/':
+                    root = root[1:]
         for file in files:
             file_list.append(sanitize_file_path(os.path.join(root, file)))
     return file_list

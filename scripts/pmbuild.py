@@ -422,6 +422,7 @@ def move(config, task_name, files):
 # zips files into a destination folder, only updating if newer
 def zip(config, task_name, files):
     unique_zips = dict()
+    task_config = config[task_name]
     for file in files:
         src = file[0]
         dst = file[1]
@@ -438,7 +439,15 @@ def zip(config, task_name, files):
         with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zip:
             for file in unique_zips[dst]:
                 print("zip " + file)
-                zip.write(file, os.path.join(zloc, file))
+                zip_path = os.path.join(zloc, file)
+                if "zip_root_dir" in task_config:
+                    zip_path = file
+                    zip_root_path = task_config["zip_root_dir"]
+                    zip_path = zip_path[len(zip_root_path):]
+                    if zip_path:
+                        if zip_path[0] == '\\' or zip_path[0] == '/':
+                            zip_path = zip_path[1:]
+                zip.write(file, zip_path)
 
 
 # deletes files and directories specified in files
@@ -488,10 +497,10 @@ def get_task_files_raw(files_task):
     pairs = []
     if os.path.isdir(files_task[0]):
         # dir
-        file_list = util.walk(files_task[0])
+        file_list = util.walk(files_task[0], strip_dir=True)
         for file in file_list:
-            src = file
-            dst = src.replace(util.sanitize_file_path(files_task[0]), util.sanitize_file_path(files_task[1]))
+            src = os.path.join(util.sanitize_file_path(files_task[0]), file)
+            dst = os.path.join(util.sanitize_file_path(files_task[1]), file)
             pairs.append((src, dst))
     else:
         # single file
