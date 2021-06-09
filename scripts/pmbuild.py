@@ -783,7 +783,7 @@ def run_tool(config, task_name, tool, files):
         if len(file[1]) > 0:
             util.create_dir(file[1])
         if deps:
-            d = dependencies.create_dependency_single(file[0], file[1], cmd)
+            d = dependencies.create_dependency_info([file[0], exe], [file[1]], cmd)
             if dependencies.check_up_to_date_single(file[1], d):
                 continue
         util.log_lvl(cmd, config, "-verbose")
