@@ -184,6 +184,11 @@ def check_up_to_date_single(dest_file, deps):
             return False
         if deps["cmdlines"] != d_json["cmdlines"]:
             return False
+    # check for missing
+    for output in d_json["files"]:
+        if not os.path.exists(output):
+            print(os.path.basename(output) + ": is missing out-of-date", flush=True)
+            return False
     # check for new additions
     dep_files = []
     for output in d_json["files"]:
