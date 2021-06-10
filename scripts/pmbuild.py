@@ -407,14 +407,24 @@ def connect(config, task_name):
     print("success: server connected")
 
 
+# deletes directories prior to copy or move to avoid stale data
+def copy_move_clean(config, task_name):
+    if "clean" in config[task_name].keys():
+        for d in config[task_name]["clean"]:
+            if os.path.exists(d):
+                shutil.rmtree(d)
+
+
 # copes files from src to destination only if newer
 def copy(config, task_name, files):
+    copy_move_clean(config, task_name)
     for file in files:
         util.copy_file_create_dir_if_newer(file[0], file[1])
 
 
 # moves files from src to destination only if newer
 def move(config, task_name, files):
+    copy_move_clean(config, task_name)
     for file in files:
         shutil.move(file[0], file[1])
 
