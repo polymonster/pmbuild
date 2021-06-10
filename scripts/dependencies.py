@@ -141,6 +141,19 @@ def create_dependency_single(input, output, cmdline=""):
     return info
 
 
+def create_dependency(input, output, cmdline=""):
+    info = dict()
+    info["cmdline"] = cmdline
+    info["files"] = dict()
+    o = output
+    info["files"][o] = []
+    i = input
+    ii = create_info(i)
+    ii["data_file"] = o[o.find(os.sep + "data" + os.sep) + 1:]
+    info["files"][o].append(ii)
+    return info
+
+
 # check depenency is up to date for a single output file, made from 1 or more input files 
 def check_up_to_date_single(dest_file, deps):
     dep_filename = util.change_ext(dest_file, ".dep")
@@ -150,7 +163,13 @@ def check_up_to_date_single(dest_file, deps):
     if not os.path.exists(dest_file):
         print("new file:" + os.path.basename(dest_file), flush=True)
         return False
-    dep_ts = os.path.getmtime(dest_file)
+    if os.path.isdir(dest_file):
+        files = os.listdir(dest_file)
+        for f in files:
+            j = os.path.join(dest_file, f)
+            dep_ts = os.path.getmtime(j)
+    else:
+        dep_ts = os.path.getmtime(dest_file)
     file = open(dep_filename)
     d_str = file.read()
     d_json = json.loads(d_str)
