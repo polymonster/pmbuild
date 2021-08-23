@@ -1361,6 +1361,7 @@ def main():
                     ext_module = importlib.import_module(ext["module"])
                     scripts[ext_name] = getattr(ext_module, ext["function"])
                 except:
+                    print(sys.exc_info())
                     print("[warning] missing module " + json.dumps(ext, indent=4))
 
         # cleans are special operations which runs first
