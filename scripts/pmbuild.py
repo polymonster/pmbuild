@@ -741,7 +741,7 @@ def replace_user_vars(arg, config):
         "teamid",
         "cwd"
     ]
-    for uv in user_vars:
+    for uv in config["user_vars"]:
         v = "%{" + uv + "}"
         if arg.find(v) != -1:
             if uv == "teamid":
