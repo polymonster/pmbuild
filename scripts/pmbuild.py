@@ -1228,6 +1228,8 @@ def main():
             j = jsn.loads("{" + sys.argv[a+1] + "}")
             for key in j.keys():
                 commandline_vars[key] = j[key]
+            # passes -vars to commandline_vars to forward the whole thing
+            commandline_vars["commandline_vars"] = "\"" + sys.argv[a+1] + "\""
             rm.append(a)
             rm.append(a+1)
     
