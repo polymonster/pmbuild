@@ -247,11 +247,15 @@ def locate_vs_latest(config):
     vs_dir = locate_vs_root()
     if len(vs_dir) > 0:
         supported = ["2015", "2017", "2019"]
-        versions = sorted(os.listdir(vs_dir), reverse=False)
+        versions = os.listdir(vs_dir)
+        found_supported_versions = []
         for v in versions:
             if v in supported:
-                update_user_config("vs_latest", "vs" + str(versions[0]), config)
-                return "vs" + v
+                found_supported_versions.append(v)
+        found_supported_versions = sorted(found_supported_versions, reverse=True)
+        if len(found_supported_versions) > 0:
+            update_user_config("vs_latest", "vs" + str(found_supported_versions[0]), config)
+            return "vs" + v
         print("[warning] could not locate valid visual studio installation in: " + vs_dir)
     # ensure we have vcvars all and try figuring out vs version from there
     configure_vc_vars_all(config)
@@ -278,7 +282,7 @@ def locate_vc_vars_all():
         return None
     pattern = os.path.join(vs_dir, "**/vcvarsall.bat")
     # if we reverse sort then we get the latest vs version
-    vc_vars = sorted(glob.glob(pattern, recursive=True), reverse=False)
+    vc_vars = sorted(glob.glob(pattern, recursive=True), reverse=True)
     if len(vc_vars) > 0:
         return vc_vars[0]
     return None
@@ -291,7 +295,7 @@ def locate_msbulild():
         return None
     pattern = os.path.join(vs_dir, "**/msbuild.exe")
     # if we reverse sort then we get the latest
-    msbuild = sorted(glob.glob(pattern, recursive=True), reverse=False)
+    msbuild = sorted(glob.glob(pattern, recursive=True), reverse=True)
     if len(msbuild) > 0:
         return msbuild[0]
     return None
@@ -737,7 +741,7 @@ def replace_user_vars(arg, config):
         "teamid",
         "cwd"
     ]
-    for uv in user_vars:
+    for uv in config["user_vars"]:
         v = "%{" + uv + "}"
         if arg.find(v) != -1:
             if uv == "teamid":
@@ -1224,6 +1228,8 @@ def main():
             j = jsn.loads("{" + sys.argv[a+1] + "}")
             for key in j.keys():
                 commandline_vars[key] = j[key]
+            # passes -vars to commandline_vars to forward the whole thing
+            commandline_vars["commandline_vars"] = "\"" + sys.argv[a+1] + "\""
             rm.append(a)
             rm.append(a+1)
     
@@ -1361,6 +1367,7 @@ def main():
                     ext_module = importlib.import_module(ext["module"])
                     scripts[ext_name] = getattr(ext_module, ext["function"])
                 except:
+                    print(sys.exc_info())
                     print("[warning] missing module " + json.dumps(ext, indent=4))
 
         # cleans are special operations which runs first
