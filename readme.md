@@ -630,6 +630,65 @@ libs: {
 }
 ```
 
+# Hidden Profiles and Tasks
+
+Tasks and profiles which are marked hidden will not be included in the list returned by `pmbuild -help`. The behaviour of the task or profile is not otherwise affected in any way. This is useful for streamlining the list of commands displayed to the user, or for excluding tasks/profiles which are never called explicitly (e.g. ones that are solely used as a base for inheritance). In the example below, setting the base task `copy_videos_base` to hidden and explicit makes it impossible for a user to call this generic version. 
+
+```yaml
+copy_base: 
+{
+    hidden: true
+    explicit: true
+    type: copy
+    files: [
+        ["src_dir/*", "dst_dir"]
+    ]
+}
+
+copy_mp4_files(copy_base): 
+{
+    hidden: false
+    explicit: false
+    files: [
+        ["src_dir/*.mp4", "dst_dir"]
+    ]
+}
+
+```
+
+# Enable/disable tasks
+
+Individual tasks in a given profile can be enabled/disabled by setting `enable: true` or `enable: false`. Tasks default to being enabled, and the enabled value is inherited across profiles. This makes it possible to inherit from a profile and make only certain tasks enabled or disabled. In the example below, `child_profile` would run `task_1` and `task_2`, whereas `base_profile` only runs `task_2`.
+
+```yaml
+base_profile:
+{
+    task_1: 
+    {
+        enabled: false
+        type: copy
+        files: [
+            ["src_dir/*", "dst_dir"]
+        ]
+    }
+    
+    task_2:
+    {
+        ...
+    }
+}
+
+child_profile(base_profile):
+{
+    task_1: 
+    {
+        enabled: true
+    }
+}
+
+
+```
+
 # Build Order
 
 By default tasks are built in the order they are specified in the config.jsn files. When using jsn inheritance it may not be clear what the build order might be or you may want to specify an explicit build order. You can do this using the `build_order` lists.
