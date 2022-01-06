@@ -656,7 +656,7 @@ copy_mp4_files(copy_base):
 
 ```
 
-# Enable/disable tasks
+# Enable/Disable Tasks
 
 Individual tasks in a given profile can be enabled/disabled by setting `enable: true` or `enable: false`. Tasks default to being enabled, and the enabled value is inherited across profiles. This makes it possible to inherit from a profile and make only certain tasks enabled or disabled. In the example below, `child_profile` would run `task_1` and `task_2`, whereas `base_profile` only runs `task_2`.
 
