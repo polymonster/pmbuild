@@ -1049,9 +1049,21 @@ def print_profiles(config):
         "pre_build_order",
         "build_order"
     ]
-    for p in config.keys():
-        if p not in non_profiles:
-            print(" " * 8 + p)
+    for p_name in config.keys():
+        if p_name not in non_profiles:
+            p = config[p_name]
+            
+            if "hidden" in p and p["hidden"] == True:
+                msg = " " * 8 + p_name + " (hidden)"
+                util.log_lvl(msg, config, "-verbose")
+                continue
+                
+            if "enabled" in p and p["enabled"] == False:
+                msg = " " * 8 + p_name + " (disabled)"
+                util.log_lvl(msg, config, "-verbose")
+                continue
+                
+            print(" " * 8 + p_name)
 
 
 # top level help
@@ -1086,8 +1098,20 @@ def pmbuild_profile_help(config, build_order):
     print("\navailable tasks for profile " + config["user_vars"]["profile"] + ":")
     print("    config.jsn (edit task settings or add new ones in here)")
     print("    build order:")
-    for task in build_order:
-        print(" " * 8 + task)
+    for task_name in build_order:
+        task = config[task_name]
+    
+        if "hidden" in task and task["hidden"] == True:
+            msg = " " * 8 + task_name + " (hidden)"
+            util.log_lvl(msg, config, "-verbose")
+            continue
+            
+        if "enabled" in task and task["enabled"] == False:
+            msg = " " * 8 + task_name + " (disabled)"
+            util.log_lvl(msg, config, "-verbose")
+            continue
+            
+        print(" " * 8 + task_name)
 
 
 # build help for core tasks
@@ -1122,6 +1146,9 @@ def generate_build_order(config, config_all, all):
             continue
         if "explicit" in task.keys():
             if task["explicit"] and "-" + task_name not in sys.argv:
+                continue
+        if "enabled" in task.keys():
+            if not task["enabled"]:
                 continue
         if "-n" + task_name in sys.argv:
             continue
@@ -1270,6 +1297,7 @@ def main():
         config = config_all
 
     # print pmbuild top level help
+    config_all["special_args"] = special_args
     if "-help" in special_args and len(sys.argv) == 1:
         pmbuild_help(config_all)
         sys.exit(0)
