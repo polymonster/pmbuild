@@ -839,6 +839,13 @@ def shell(config, task_name):
             error_exit(config)
 
 
+# get the make executable for the current platform
+def make_for_platform():
+    if util.get_platform_name() == "windows":
+        return "mingw32-make"
+    return "make"
+
+
 # generate a cli command for building with different toolchains (make, gcc/clang, xcodebuild, msbuild)
 def make_for_toolchain(jsn_config, file, options):
     make_config = jsn_config["make"]
@@ -850,7 +857,7 @@ def make_for_toolchain(jsn_config, file, options):
 
     cmds = {
         "make": "make",
-        "emmake": "emmake make",
+        "emmake": "emmake " + make_for_platform(),
         "xcodebuild": "xcodebuild",
         "msbuild": msbuild
     }
@@ -886,7 +893,7 @@ def help_for_make_toolchain(config, toolchain):
         msbuild = get_msbuild()
     cmd = {
         "make": "make --help",
-        "emmake": "emmake make --help",
+        "emmake": "emmake " + make_for_platform() + " --help",
         "xcodebuild": "xcodebuild -help",
         "msbuild": msbuild + " /help"
     }
