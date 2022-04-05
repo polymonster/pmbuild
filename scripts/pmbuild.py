@@ -753,6 +753,13 @@ def replace_user_vars(arg, config):
     return arg
 
 
+def fill_user_vars(raw_config, config):
+    for uv in config["user_vars"]:
+        v = "%{" + uv + "}"
+        raw_config = raw_config.replace(v, config["user_vars"][uv])
+
+    return raw_config
+
 # expand args evaluating %{input_file}, %{output_file} and %{export_args} returns None, if export args are expect but missing
 def expand_args(args, config, task_name, input_file, output_file):
     cmd = ""
@@ -1336,6 +1343,11 @@ def main():
         for path in config["search_paths"]:
             sys.path.append(path)
         config.pop("search_paths")
+
+    # evaluate user vars
+    config_string = json.dumps(config, indent=4)
+    config_string = fill_user_vars( config_string, config )
+    config = json.loads(config_string)
 
     # final handling of invalid profiles
     if profile_pos < len(sys.argv):
