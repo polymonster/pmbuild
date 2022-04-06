@@ -753,7 +753,7 @@ def replace_user_vars(arg, config):
     return arg
 
 
-def fill_user_vars(raw_config, config):
+def evaluate_user_vars(raw_config, config):
     ignored_vars = [
         "input_file",
         "output_file",
@@ -768,25 +768,30 @@ def fill_user_vars(raw_config, config):
         "cwd"
     ]
 
+    #find required vars
+    required_vars = []
     idx_end = 0
     idx_start = 0
-
     while idx_end != -1 and idx_start != -1:
         idx_start = raw_config.find("%{",idx_end)
         if idx_start != -1:
             idx_end = raw_config.find("}",idx_start)
             if idx_end != -1:
                 var_name = raw_config[idx_start+2:idx_end]
-                if var_name in ignored_vars:
-                    continue
+                required_vars.append(var_name)
 
-                value = ""
-                if "user_vars" not in config.keys() or var_name not in config["user_vars"]:
-                    print( "User var '"+var_name+"' not defined")
-                if "user_vars" in config.keys() and var_name in config["user_vars"]:
-                    value = config["user_vars"][var_name]
-                raw_config = raw_config[:idx_start] + value + raw_config[idx_end+1:]
-                idx_end = idx_start
+    print(required_vars)
+    #remove ignored from required vars
+    required_vars = [var for var in required_vars if var not in ignored_vars]
+
+    print(required_vars)
+    #replace vars with defined values
+    for var in required_vars:
+        if "user_vars" not in config.keys() or var not in config["user_vars"]:
+            print( "User var '"+var+"' not defined")
+            raw_config.replace("%{"+var+"}","")
+            continue
+        raw_config.replace("%{"+var+"}",config["user_vars"][var])
 
     return raw_config
 
@@ -1465,7 +1470,7 @@ def main():
             task = config[task_name]
             # evaluate user vars
             task_string = json.dumps(task, indent=4)
-            task_string = fill_user_vars( task_string, config )
+            task_string = evaluate_user_vars( task_string, config )
             task = json.loads(task_string)
 
             if "type" not in task:
