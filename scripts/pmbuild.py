@@ -756,6 +756,7 @@ def replace_user_vars(arg, config):
     return arg
 
 
+# evaluates %{user_vars} replacing the string with variables set from the commandline
 def evaluate_user_vars(raw_config, config):
     ignored_vars = [
         "input_file",
@@ -764,14 +765,13 @@ def evaluate_user_vars(raw_config, config):
         "target_name",
         "export_args",
         "vs_latest",
-        "target_name",
         "container_file",
         "windows_sdk_version",
         "teamid",
         "cwd"
     ]
 
-    #find required vars
+    # find required vars
     required_vars = []
     idx_end = 0
     idx_start = 0
@@ -783,17 +783,17 @@ def evaluate_user_vars(raw_config, config):
                 var_name = raw_config[idx_start+2:idx_end]
                 required_vars.append(var_name)
 
-    #remove ignored from required vars
+    # remove ignored from required vars
     required_vars = [var for var in required_vars if var not in ignored_vars]
 
-    #replace vars with defined values
+    # replace vars with defined values
     for var in required_vars:
         if "user_vars" not in config.keys() or var not in config["user_vars"]:
             print( "[warning] user var '{}' not defined".format(var))
             continue
         raw_config.replace("%{"+var+"}",config["user_vars"][var])
-
     return raw_config
+
 
 # expand args evaluating %{input_file}, %{output_file} and %{export_args} returns None, if export args are expect but missing
 def expand_args(args, config, task_name, input_file, output_file):
