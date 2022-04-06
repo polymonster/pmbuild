@@ -754,9 +754,39 @@ def replace_user_vars(arg, config):
 
 
 def fill_user_vars(raw_config, config):
-    for uv in config["user_vars"]:
-        v = "%{" + uv + "}"
-        raw_config = raw_config.replace(v, config["user_vars"][uv])
+    ignored_vars = [
+        "input_file",
+        "output_file",
+        "target_path",
+        "target_name",
+        "export_args",
+        "vs_latest",
+        "target_name",
+        "container_file",
+        "windows_sdk_version",
+        "teamid",
+        "cwd"
+    ]
+
+    idx_end = 0
+    idx_start = 0
+
+    while idx_end != -1 and idx_start != -1:
+        idx_start = raw_config.find("%{",idx_end)
+        if idx_start != -1:
+            idx_end = raw_config.find("}",idx_start)
+            if idx_end != -1:
+                var_name = raw_config[idx_start+2:idx_end]
+                if var_name in ignored_vars:
+                    continue
+
+                value = ""
+                if "user_vars" not in config.keys() or var_name not in config["user_vars"]:
+                    print( "User var '"+var_name+"' not defined")
+                if "user_vars" in config.keys() and var_name in config["user_vars"]:
+                    value = config["user_vars"][var_name]
+                raw_config = raw_config[:idx_start] + value + raw_config[idx_end+1:]
+                idx_end - 3 # remove offset of 3 characters %{}
 
     return raw_config
 
@@ -1344,11 +1374,6 @@ def main():
             sys.path.append(path)
         config.pop("search_paths")
 
-    # evaluate user vars
-    config_string = json.dumps(config, indent=4)
-    config_string = fill_user_vars( config_string, config )
-    config = json.loads(config_string)
-
     # final handling of invalid profiles
     if profile_pos < len(sys.argv):
         config["user_vars"]["profile"] = sys.argv[profile_pos]
@@ -1438,6 +1463,11 @@ def main():
         # run tasks
         for task_name in runnable_ordered:
             task = config[task_name]
+            # evaluate user vars
+            task_string = json.dumps(task, indent=4)
+            task_string = fill_user_vars( task_string, config )
+            task = json.loads(task_string)
+
             if "type" not in task:
                 continue
             if "type" == "clean":
