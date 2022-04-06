@@ -753,6 +753,45 @@ def replace_user_vars(arg, config):
     return arg
 
 
+def evaluate_user_vars(raw_config, config):
+    ignored_vars = [
+        "input_file",
+        "output_file",
+        "target_path",
+        "target_name",
+        "export_args",
+        "vs_latest",
+        "target_name",
+        "container_file",
+        "windows_sdk_version",
+        "teamid",
+        "cwd"
+    ]
+
+    #find required vars
+    required_vars = []
+    idx_end = 0
+    idx_start = 0
+    while idx_end != -1 and idx_start != -1:
+        idx_start = raw_config.find("%{",idx_end)
+        if idx_start != -1:
+            idx_end = raw_config.find("}",idx_start)
+            if idx_end != -1:
+                var_name = raw_config[idx_start+2:idx_end]
+                required_vars.append(var_name)
+
+    #remove ignored from required vars
+    required_vars = [var for var in required_vars if var not in ignored_vars]
+
+    #replace vars with defined values
+    for var in required_vars:
+        if "user_vars" not in config.keys() or var not in config["user_vars"]:
+            print( "[warning] user var '{}' not defined".format(var))
+            continue
+        raw_config.replace("%{"+var+"}",config["user_vars"][var])
+
+    return raw_config
+
 # expand args evaluating %{input_file}, %{output_file} and %{export_args} returns None, if export args are expect but missing
 def expand_args(args, config, task_name, input_file, output_file):
     cmd = ""
@@ -1426,6 +1465,11 @@ def main():
         # run tasks
         for task_name in runnable_ordered:
             task = config[task_name]
+            # evaluate user vars
+            task_string = json.dumps(task, indent=4)
+            task_string = evaluate_user_vars( task_string, config )
+            task = json.loads(task_string)
+
             if "type" not in task:
                 continue
             if "type" == "clean":
