@@ -716,12 +716,15 @@ def apply_export_config_rules(export_config, task_name, filename):
         file_config[key] = cfg[key]
     if "rules" in export_config[task_name]:
         rules = export_config[task_name]["rules"]
+        override_rule = dict()
         for rule in rules.keys():
             rule_config = rules[rule]
             files = rule_config["files"]
             if filename in files:
-                util.merge_dicts(file_config, rule_config)
-                file_config.pop("files", None)
+                override_rule = dict(rules[rule])
+        if override_rule:
+            util.merge_dicts(file_config, override_rule)
+            file_config.pop("files", None)
     return file_config
 
 
