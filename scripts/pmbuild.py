@@ -786,7 +786,7 @@ def fill_user_vars(raw_config, config):
                 if "user_vars" in config.keys() and var_name in config["user_vars"]:
                     value = config["user_vars"][var_name]
                 raw_config = raw_config[:idx_start] + value + raw_config[idx_end+1:]
-                idx_end - 3 # remove offset of 3 characters %{}
+                idx_end = idx_start
 
     return raw_config
 
