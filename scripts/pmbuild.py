@@ -780,15 +780,13 @@ def evaluate_user_vars(raw_config, config):
                 var_name = raw_config[idx_start+2:idx_end]
                 required_vars.append(var_name)
 
-    print(required_vars)
     #remove ignored from required vars
     required_vars = [var for var in required_vars if var not in ignored_vars]
 
-    print(required_vars)
     #replace vars with defined values
     for var in required_vars:
         if "user_vars" not in config.keys() or var not in config["user_vars"]:
-            print( "User var '"+var+"' not defined")
+            print( "User var '{}' not defined".format(var))
             raw_config.replace("%{"+var+"}","")
             continue
         raw_config.replace("%{"+var+"}",config["user_vars"][var])
