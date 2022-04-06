@@ -786,8 +786,7 @@ def evaluate_user_vars(raw_config, config):
     #replace vars with defined values
     for var in required_vars:
         if "user_vars" not in config.keys() or var not in config["user_vars"]:
-            print( "User var '{}' not defined".format(var))
-            raw_config.replace("%{"+var+"}","")
+            print( "[warning] user var '{}' not defined".format(var))
             continue
         raw_config.replace("%{"+var+"}",config["user_vars"][var])
 
