@@ -791,7 +791,7 @@ def evaluate_user_vars(raw_config, config):
         if "user_vars" not in config.keys() or var not in config["user_vars"]:
             print( "[warning] user var '{}' not defined".format(var))
             continue
-        raw_config.replace("%{"+var+"}",config["user_vars"][var])
+        raw_config = raw_config.replace("%{"+var+"}",config["user_vars"][var])
 
     return raw_config
 
@@ -1472,6 +1472,7 @@ def main():
             task_string = json.dumps(task, indent=4)
             task_string = evaluate_user_vars( task_string, config )
             task = json.loads(task_string)
+            config[task_name] = task
 
             if "type" not in task:
                 continue
