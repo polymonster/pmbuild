@@ -516,7 +516,7 @@ def get_task_files_raw(files_task):
             src = os.path.join(util.sanitize_file_path(files_task[0]), file)
             dst = os.path.join(util.sanitize_file_path(files_task[1]), file)
             pairs.append((src, dst))
-    else:
+    elif os.path.exists(files_task[0]):
         # single file
         pairs.append((util.sanitize_file_path(files_task[0]), util.sanitize_file_path(files_task[1])))
     return pairs
