@@ -3,6 +3,7 @@ import shutil
 import json
 import util
 import pmbuild
+import fnmatch
 
 default_settings = dict()
 default_settings["textures_dir"] = "assets/textures/"
@@ -245,6 +246,7 @@ def delete_orphan(file):
 
 # checks if the source file exists and deletes the transcoded / converted version
 def delete_orphans(config, task_name, files):
+    task_config = config[task_name]
     perform_delete = util.value_with_default("delete_orphans", config["user_vars"], False)
     for f in files:
         if not os.path.exists(f[0]):
@@ -255,6 +257,14 @@ def delete_orphans(config, task_name, files):
         check_count = 0
         basenames = []
         basename_strip = []
+        # mark excluded files as ignored
+        if "ignore" in task_config.keys():
+            for ff in dep_files:
+                for exclude in task_config["ignore"]:
+                    if fnmatch.fnmatch(ff, exclude):
+                        print( "ignoring '{}' as per '{}' exclusion".format( ff, exclude ) )
+                        dep_files[ff][0]["ignore"] = True
+                        break
         # check dependencies to see if src files still exist
         for output in dep_files:
             for i in dep_files[output]:
@@ -262,12 +272,16 @@ def delete_orphans(config, task_name, files):
                 bn = os.path.basename(i["data_file"])
                 basenames.append(bn)
                 basename_strip.append(os.path.splitext(bn)[0])
+                if "ignore" in i.keys() and i["ignore"] is True:
+                    continue
                 if not os.path.exists(i["name"]):
                     print("orphan file: " + f[0])
                     if perform_delete:
                         del_count = del_count + 1
                         delete_orphan(output)
-        # check files which have may have changed ext and alias the same dep
+
+        # check files which may have changed ext and alias the same dep
+        found_files = []
         dirname = os.path.dirname(f[0])
         dir_list = os.listdir(dirname)
         for ff in dir_list:
@@ -277,9 +291,21 @@ def delete_orphans(config, task_name, files):
             bns = os.path.splitext(bn)[0]
             if bns in basename_strip:
                 if bn not in basenames:
-                    print("orphan file dst changed: " + ff + " to " + str(basenames))
-                    if perform_delete:
-                        delete_orphan(os.path.join(dirname, ff))
+                    found_files.append(os.path.join(dirname, ff))
+        # exclude ignored files
+        if "ignore" in task_config.keys():
+            for ff in found_files:
+                for exclude in task_config["ignore"]:
+                    if fnmatch.fnmatch(ff, exclude):
+                        print( "ignoring '{}' as per '{}' exclusion".format( ff, exclude ) )
+                        found_files.remove(ff)
+                        break
+        # delte files
+        for ff in found_files:
+            print("orphan file dst changed: " + ff + " to " + str(basenames))
+            if perform_delete:
+                delete_orphan(ff)
+
         # delete dependency file itself if we remove all outputs
         if del_count == check_count:
             print("delete orphan dep: " + f[0])
