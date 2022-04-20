@@ -655,7 +655,22 @@ def expand_rules_files(export_config, task_name, subdir):
     rules = export_config[task_name]["rules"]
     if "presets" in export_config[task_name]:
         presets = export_config[task_name]["presets"]
-    for rule in rules.keys():
+
+    # force rule order if specified
+    rules_order = []
+    if "rules_order" in export_config[task_name]:
+        config_rules_order = export_config[task_name]["rules_order"]
+        for rule in rules.keys():
+            if rule not in config_rules_order:
+                rules_order.append(rule)
+        for rule in config_rules_order:
+            rules_order.append(rule)
+    else:
+        for rule in rules.keys():
+            rules_order.append(rule)
+
+    # apply rules in order, overriding by the last rule
+    for rule in rules_order:
         rule_config = rules[rule]
         expanded_files = []
         for file_match in rule_config["files"]:
