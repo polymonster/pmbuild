@@ -516,7 +516,7 @@ def get_task_files_raw(files_task):
             src = os.path.join(util.sanitize_file_path(files_task[0]), file)
             dst = os.path.join(util.sanitize_file_path(files_task[1]), file)
             pairs.append((src, dst))
-    else:
+    elif os.path.exists(files_task[0]):
         # single file
         pairs.append((util.sanitize_file_path(files_task[0]), util.sanitize_file_path(files_task[1])))
     return pairs
@@ -655,7 +655,22 @@ def expand_rules_files(export_config, task_name, subdir):
     rules = export_config[task_name]["rules"]
     if "presets" in export_config[task_name]:
         presets = export_config[task_name]["presets"]
-    for rule in rules.keys():
+
+    # force rule order if specified
+    rules_order = []
+    if "rules_order" in export_config[task_name]:
+        config_rules_order = export_config[task_name]["rules_order"]
+        for rule in rules.keys():
+            if rule not in config_rules_order:
+                rules_order.append(rule)
+        for rule in config_rules_order:
+            rules_order.append(rule)
+    else:
+        for rule in rules.keys():
+            rules_order.append(rule)
+
+    # apply rules in order, overriding by the last rule
+    for rule in rules_order:
         rule_config = rules[rule]
         expanded_files = []
         for file_match in rule_config["files"]:
@@ -716,12 +731,15 @@ def apply_export_config_rules(export_config, task_name, filename):
         file_config[key] = cfg[key]
     if "rules" in export_config[task_name]:
         rules = export_config[task_name]["rules"]
+        override_rule = dict()
         for rule in rules.keys():
             rule_config = rules[rule]
             files = rule_config["files"]
             if filename in files:
-                util.merge_dicts(file_config, rule_config)
-                file_config.pop("files", None)
+                override_rule = dict(rules[rule])
+        if override_rule:
+            util.merge_dicts(file_config, override_rule)
+            file_config.pop("files", None)
     return file_config
 
 
@@ -751,6 +769,45 @@ def replace_user_vars(arg, config):
                 error_exit(config)
             arg = arg.replace(v, config["user_vars"][uv])
     return arg
+
+
+# evaluates %{user_vars} replacing the string with variables set from the commandline
+def evaluate_user_vars(raw_config, config):
+    ignored_vars = [
+        "input_file",
+        "output_file",
+        "target_path",
+        "target_name",
+        "export_args",
+        "vs_latest",
+        "container_file",
+        "windows_sdk_version",
+        "teamid",
+        "cwd"
+    ]
+
+    # find required vars
+    required_vars = []
+    idx_end = 0
+    idx_start = 0
+    while idx_end != -1 and idx_start != -1:
+        idx_start = raw_config.find("%{",idx_end)
+        if idx_start != -1:
+            idx_end = raw_config.find("}",idx_start)
+            if idx_end != -1:
+                var_name = raw_config[idx_start+2:idx_end]
+                required_vars.append(var_name)
+
+    # remove ignored from required vars
+    required_vars = [var for var in required_vars if var not in ignored_vars]
+
+    # replace vars with defined values
+    for var in required_vars:
+        if "user_vars" not in config.keys() or var not in config["user_vars"]:
+            print( "[warning] user var '{}' not defined".format(var))
+            continue
+        raw_config = raw_config.replace("%{"+var+"}",config["user_vars"][var])
+    return raw_config
 
 
 # expand args evaluating %{input_file}, %{output_file} and %{export_args} returns None, if export args are expect but missing
@@ -1426,6 +1483,12 @@ def main():
         # run tasks
         for task_name in runnable_ordered:
             task = config[task_name]
+            # evaluate user vars
+            task_string = json.dumps(task, indent=4)
+            task_string = evaluate_user_vars( task_string, config )
+            task = json.loads(task_string)
+            config[task_name] = task
+
             if "type" not in task:
                 continue
             if "type" == "clean":
