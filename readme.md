@@ -38,12 +38,20 @@ Examples of working [scripts](https://github.com/polymonster/pmtech/blob/master/
 
 Bring your own tools and build scripts and hook them into pmbuild and add custom python modules to call from pmbuild.
 
-# Dependencies
+# Running from binary
+
+You can install one of the prebuilt releases which is simply a single executable to drop anywhere you like.
+
+# Running from source
+
+You can run from source code as so:
+
+## Dependencies
 
 - python3 is the only dependency required
 - optional: `pip install cryptography` if you want to use encrypted credentials.
 
-# Cloning
+## Cloning
 
 pmbuild requires some submodules so please clone recursively:
 
@@ -59,7 +67,7 @@ git submodule update --init --recursive
 
 # Usage
 
-Add the pmbuild repository directory to your path for convenience so you can simply invoke `pmbuild`, otherwise you can locate pmbuild manually and run `<path_to_pmbuild>/pmbuild`.
+Add the pmbuild repository directory / executable installation directory to your path for convenience so you can simply invoke `pmbuild`, otherwise you can locate pmbuild manually and run `<path_to_pmbuild>/pmbuild`.
 
 pmbuild is a CLI there must be a file called config.jsn in the current working directory, this how you describe your build pipelines. Add the pmbuild root directory to your path for convenience: 
 
