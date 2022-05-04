@@ -38,20 +38,20 @@ Examples of working [scripts](https://github.com/polymonster/pmtech/blob/master/
 
 Bring your own tools and build scripts and hook them into pmbuild and add custom python modules to call from pmbuild.
 
-# Running from binary
+## Running from binary
 
-You can install one of the prebuilt releases which is simply a single executable to drop anywhere you like.
+You can install one of the prebuilt [releases](https://github.com/polymonster/pmbuild/releases) which is simply a single executable to drop anywhere you like.
 
-# Running from source
+## Running from source
 
-You can run from source code as so:
+You can run from source code as so, which contains submodules used in some of my other projects
 
-## Dependencies
+### Dependencies
 
 - python3 is the only dependency required
 - optional: `pip install cryptography` if you want to use encrypted credentials.
 
-## Cloning
+### Cloning
 
 pmbuild requires some submodules so please clone recursively:
 
