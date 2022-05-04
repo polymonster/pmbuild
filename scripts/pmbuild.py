@@ -1512,6 +1512,9 @@ def main():
                 else:
                     scripts.get(task_type)(config, task_name)
                 pass
+            else:
+                print("[error] cannot find an associated tool or script for {}".format(task_type))
+                print("        add the tool and path to pmbuild_init.jsn")
 
     util.print_duration(start_time)
 

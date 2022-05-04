@@ -1,0 +1,45 @@
+on:
+  push:
+    tags:
+    - 'v*'
+
+name: build-release
+
+jobs:
+  setup:
+    name: create release
+    runs-on: ubuntu-latest
+    steps:
+      - name: create_release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+  windows:
+    needs: setup
+    name: windows
+    runs-on: windows-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: pyinstaller
+        run: "pip install PyInstaller"
+      - name: build
+        run: pyinstaller .\scripts\pmbuild.py --onefile -i NONE --distpath build/dist/ --workpath build/dist
+      - name: upload
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.setup.outputs.upload_url }}
+          asset_path: ./build/dist/pmbuild.exe
+          asset_name: pmbuild.exe
+          asset_content_type: application/octet-stream
