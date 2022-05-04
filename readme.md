@@ -69,7 +69,34 @@ git submodule update --init --recursive
 
 Add the pmbuild repository directory / executable installation directory to your path for convenience so you can simply invoke `pmbuild`, otherwise you can locate pmbuild manually and run `<path_to_pmbuild>/pmbuild`.
 
-pmbuild is a CLI there must be a file called config.jsn in the current working directory, this how you describe your build pipelines. Add the pmbuild root directory to your path for convenience: 
+pmbuild is a CLI there must be a file called `config.jsn` in the current working directory, this how you describe your build pipelines. 
+
+## Config Files
+
+Configs are written in [jsn](https://github.com/polymonster/jsn). Define build `tasks` in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
+
+```yaml
+{
+    tools<mac>: {
+        // define paths to tools or scripts
+    }
+    
+    tools<windows>: {
+        // define different ones for windows
+    }
+    
+    mac:
+    {
+        // mac profile builds tasks for mac platform
+        // ..
+        task: {
+            // define tasks to run
+        }
+    }
+}
+```
+
+## Running Tasks
 
 ```
 # runs build tasks
@@ -100,31 +127,6 @@ pmbuild mac -premake -texturec
 
 # rus all tasks and excludes copy
 pmbuild mac -all -ncopy
-```
-
-# Config Files
-
-Configs are written in [jsn](https://github.com/polymonster/jsn). Define build tasks in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
-
-```yaml
-{
-    tools<mac>: {
-        // define paths to tools or scripts
-    }
-    
-    tools<windows>: {
-        // define different ones for windows
-    }
-    
-    mac:
-    {
-        // mac profile builds tasks for mac platform
-        // ..
-        task: {
-            // define tasks to run
-        }
-    }
-}
 ```
 
 # Help / Display Available Profiles
