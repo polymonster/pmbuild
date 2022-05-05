@@ -48,7 +48,7 @@ jobs:
   macos:
     needs: setup
     name: macos
-    runs-on: windows-latest
+    runs-on: macos-latest
     steps:
       - name: checkout
         uses: actions/checkout@v2
