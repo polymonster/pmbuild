@@ -55,7 +55,7 @@ jobs:
       - name: pyinstaller
         run: "python3 -m pip install PyInstaller"
       - name: build
-        run: python3 -m PyInstaller .\scripts\pmbuild.py --onefile -i NONE --distpath build/dist/ --workpath build/dist
+        run: python3 -m PyInstaller scripts/pmbuild.py --onefile -i NONE --distpath build/dist/ --workpath build/dist
       - name: zip
         run: zip -r macOS-x64.zip build/dist
       - name: upload
