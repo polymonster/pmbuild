@@ -32,7 +32,7 @@ jobs:
       - name: pyinstaller
         run: "pip install PyInstaller"
       - name: build
-        run: pyinstaller .\scripts\pmbuild.py --onefile -i NONE --distpath build/dist/ --workpath build/dist
+        run: pyinstaller .\scripts\pmbuild.py --onefile -i NONE --distpath build/dist/ --workpath build/dist/work
       - name: zip
         run: Compress-Archive -LiteralPath build/dist -DestinationPath build/Windows-x64.zip
       - name: upload
@@ -55,7 +55,7 @@ jobs:
       - name: pyinstaller
         run: "python3 -m pip install PyInstaller"
       - name: build
-        run: python3 -m PyInstaller scripts/pmbuild.py -y --onefile -i NONE --distpath build/dist/ --workpath build/dist
+        run: python3 -m PyInstaller scripts/pmbuild.py -y --onefile -i NONE --distpath build/dist/ --workpath build/dist/work
       - name: zip
         run: zip -r macOS-x64.zip build/dist
       - name: upload
