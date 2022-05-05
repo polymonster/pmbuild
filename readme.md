@@ -1,4 +1,5 @@
 # pmbuild
+[![release](https://github.com/polymonster/pmbuild/actions/workflows/release.yaml/badge.svg)](https://github.com/polymonster/pmbuild/actions/workflows/release.yaml)
 
 A build system with a focus toward game development, it can be used to orchestrate multi platform build pipelines to transform source assets (textures, shaders, models) into game ready formats, build code, deploy packages and run tests. pmbuild provides a framework to add new build tasks, integrate your own tools and reduce the amount of 'glue' code required to run various build steps.
 
