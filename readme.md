@@ -1,4 +1,5 @@
 # pmbuild
+[![release](https://github.com/polymonster/pmbuild/actions/workflows/release.yaml/badge.svg)](https://github.com/polymonster/pmbuild/actions/workflows/release.yaml)
 
 A build system with a focus toward game development, it can be used to orchestrate multi platform build pipelines to transform source assets (textures, shaders, models) into game ready formats, build code, deploy packages and run tests. pmbuild provides a framework to add new build tasks, integrate your own tools and reduce the amount of 'glue' code required to run various build steps.
 
@@ -38,12 +39,20 @@ Examples of working [scripts](https://github.com/polymonster/pmtech/blob/master/
 
 Bring your own tools and build scripts and hook them into pmbuild and add custom python modules to call from pmbuild.
 
-# Dependencies
+## Running from binary
+
+You can install one of the prebuilt [releases](https://github.com/polymonster/pmbuild/releases) which is simply a single executable to drop anywhere you like.
+
+## Running from source
+
+You can run from source code as so, which contains submodules used in some of my other projects
+
+### Dependencies
 
 - python3 is the only dependency required
 - optional: `pip install cryptography` if you want to use encrypted credentials.
 
-# Cloning
+### Cloning
 
 pmbuild requires some submodules so please clone recursively:
 
@@ -59,9 +68,36 @@ git submodule update --init --recursive
 
 # Usage
 
-Add the pmbuild repository directory to your path for convenience so you can simply invoke `pmbuild`, otherwise you can locate pmbuild manually and run `<path_to_pmbuild>/pmbuild`.
+Add the pmbuild repository directory / executable installation directory to your path for convenience so you can simply invoke `pmbuild`, otherwise you can locate pmbuild manually and run `<path_to_pmbuild>/pmbuild`.
 
-pmbuild is a CLI there must be a file called config.jsn in the current working directory, this how you describe your build pipelines. Add the pmbuild root directory to your path for convenience: 
+pmbuild is a CLI there must be a file called `config.jsn` in the current working directory, this how you describe your build pipelines. 
+
+## Config Files
+
+Configs are written in [jsn](https://github.com/polymonster/jsn). Define build `tasks` in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
+
+```yaml
+{
+    tools<mac>: {
+        // define paths to tools or scripts
+    }
+    
+    tools<windows>: {
+        // define different ones for windows
+    }
+    
+    mac:
+    {
+        // mac profile builds tasks for mac platform
+        // ..
+        task: {
+            // define tasks to run
+        }
+    }
+}
+```
+
+## Running Tasks
 
 ```
 # runs build tasks
@@ -92,31 +128,6 @@ pmbuild mac -premake -texturec
 
 # rus all tasks and excludes copy
 pmbuild mac -all -ncopy
-```
-
-# Config Files
-
-Configs are written in [jsn](https://github.com/polymonster/jsn). Define build tasks in a `config.jsn` file. A `profile` groups together `tasks` for a particular platform and we can define `tools` to run for each task.
-
-```yaml
-{
-    tools<mac>: {
-        // define paths to tools or scripts
-    }
-    
-    tools<windows>: {
-        // define different ones for windows
-    }
-    
-    mac:
-    {
-        // mac profile builds tasks for mac platform
-        // ..
-        task: {
-            // define tasks to run
-        }
-    }
-}
 ```
 
 # Help / Display Available Profiles

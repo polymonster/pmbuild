@@ -1138,7 +1138,7 @@ def print_profiles(config):
 
 # top level help
 def pmbuild_help(config):
-    util.print_header("pmbuild version 4.0 -help ")
+    util.print_header("pmbuild version v1.4 -help ")
     print("\nusage:")
     print("    pmbuild <profile> <tasks...>")
     print("    pmbuild make <target> <args...>")
@@ -1303,7 +1303,7 @@ def main():
     ]
 
     # switch between different modes
-    build_mode = "pmbuild (v4)"
+    build_mode = "pmbuild (v1.4)"
     profile_pos = 1
     if sys.argv[1] == "make" or sys.argv[1] == "launch":
         build_mode = "pmbuild " + sys.argv[1]
@@ -1518,6 +1518,9 @@ def main():
                 else:
                     scripts.get(task_type)(config, task_name)
                 pass
+            else:
+                print("[error] cannot find an associated tool or script for {}".format(task_type))
+                print("        add the tool and path to pmbuild_init.jsn")
 
     util.print_duration(start_time)
 
