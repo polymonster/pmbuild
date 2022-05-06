@@ -540,6 +540,7 @@ def file_list_to_container_format(container, files):
 def filter_files(config, task_name, files):
     dirs = []
     lookups = dict()
+    filter_list = []
     for file in files:
         dn = os.path.dirname(file[0])
         if dn not in dirs:
@@ -556,14 +557,17 @@ def filter_files(config, task_name, files):
                     break
         if not excluded:
             lookups[file[0]] = (file[0], file[1])
+            filter_list.append((file[0], file[1]))
     # check for processing containers
     containers = util.value_with_default("containers", config[task_name], True)
     container_output_ext = util.value_with_default("change_ext", config[task_name], ".txt")
+    is_container = False
     for directory in dirs:
         en = os.path.join(directory, "export.jsn")
         if os.path.exists(en):
             j = jsn.loads(open(en, "r").read())
             if "container" in j:
+                is_container = True
                 container_dir = os.path.dirname(en)
                 bn = os.path.basename(directory)
                 dir_files = sorted(os.listdir(directory))
@@ -609,10 +613,12 @@ def filter_files(config, task_name, files):
                     if current_files != container_files or newest > built:
                         open(container_file, "w+").write(container_files)
                     lookups[container_file] = (container_file, dest_file)
-    pairs = []
-    for f in lookups.keys():
-        pairs.append((lookups[f][0], lookups[f][1]))
-    return pairs
+    if is_container:
+        pairs = []
+        for f in lookups.keys():
+            pairs.append((lookups[f][0], lookups[f][1]))
+        return pairs
+    return filter_list
 
 
 # takes a tasks files objects and extracts a tuple(input, output) list from directory, single files, glob or regex
