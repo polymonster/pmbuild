@@ -29,10 +29,12 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2
+        with:
+          submodules: "recursive"
       - name: pyinstaller
         run: "pip install PyInstaller"
       - name: build
-        run: pyinstaller .\scripts\pmbuild.py --onefile -i NONE --distpath build/dist/ --workpath build/work/
+        run: pyinstaller scripts\pmbuild.py --onefile -i NONE --distpath build/dist/ --workpath build/work/
       - name: zip
         run: Compress-Archive -LiteralPath build/dist -DestinationPath build/Windows-x64.zip
       - name: upload
@@ -52,6 +54,8 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2
+        with:
+          submodules: "recursive"
       - name: pyinstaller
         run: "python3 -m pip install PyInstaller"
       - name: build
