@@ -555,6 +555,10 @@ def filter_files(config, task_name, files):
                 elif os.path.basename(file[0]) == exclude:
                     excluded = True
                     break
+        if "user_filter_files" in config:
+            if not fnmatch.fnmatch(file[0], config["user_filter_files"]):
+                excluded = True
+                break
         if not excluded:
             lookups[file[0]] = (file[0], file[1])
             filter_list.append((file[0], file[1]))
@@ -840,8 +844,10 @@ def expand_args(args, config, task_name, input_file, output_file):
             arg = arg.strip()
         arg = replace_user_vars(arg, config)
         cmd += arg + " "
-    for arg in config["user_args"]:
-        cmd += arg + " "
+    # append user_args, unless args are user args
+    if args != config["user_args"]:
+        for arg in config["user_args"]:
+            cmd += arg + " "
     cmd = cmd.strip()
     return cmd
 
@@ -868,6 +874,27 @@ def run_tool(config, task_name, tool, files):
         e = p.wait()
         if e == 0 and deps:
             dependencies.write_to_file_single(d, file[1])
+        if e != 0:
+            print("[error] processing file " + file[0])
+            error_exit(config)
+
+
+# run tool standalone
+def run_tool_standalone(config, tool, files):
+    print(files)
+    exe = util.sanitize_file_path(config["tools"][tool])
+    for file in files:
+        cmd = exe + " "
+        args = expand_args(config["user_args"], config, "", file[0], file[1])
+        if not args:
+            print("[warning] missing export_args for " + file[0])
+            continue
+        cmd += args
+        if len(file[1]) > 0:
+            util.create_dir(file[1])
+        util.log_lvl(cmd, config, "-verbose")
+        p = subprocess.Popen(cmd, shell=True)
+        e = p.wait()
         if e != 0:
             print("[error] processing file " + file[0])
             error_exit(config)
@@ -1143,6 +1170,7 @@ def pmbuild_help(config):
     print("    pmbuild <profile> <tasks...>")
     print("    pmbuild make <target> <args...>")
     print("    pmbuild launch <target> <args...>")
+    print("    pmbuild tool <tool name> <args...>")
     print("\nhelp:")
     print("    pbmuild -help (display this dialog).")
     print("    pbmuild <profile> -help (display help for the chosen profile).")
@@ -1157,6 +1185,8 @@ def pmbuild_help(config):
     print("    -ignore_errors (will not exit on error).")
     print("    -vars <string of jsn> (added to user_vars ie. \"var_bool: true, var_int: 1, var_obj:{key: value}\").")
     print("    -args (anything supplied after -args will be forwarded to tools and other scripts).")
+    print("    -files '[[input, output]]' supply files to pass to a tool when running pmbuild tool <tool> %{input_file} %{output_file}")
+    print("    -filter_files (additional fnmatch to filter files expanded by files object, to isolate and build individual files or pattern matches).")
     print("\nsettings:")
     print("    pmbuild -credentials (creates a jsn file to allow input and encryption of user names and passwords).")
     print_profiles(config)
@@ -1308,6 +1338,9 @@ def main():
     if sys.argv[1] == "make" or sys.argv[1] == "launch":
         build_mode = "pmbuild " + sys.argv[1]
         profile_pos = 2
+    elif sys.argv[1] == "tool":
+        build_mode = "pmbuild " + sys.argv[1]
+        profile_pos = len(sys.argv)
 
     # add implicit all
     implicit_all = False
@@ -1338,6 +1371,24 @@ def main():
             user_args.append(sys.argv[i])
         sys.argv = sys.argv[:index]
 
+    # extract special files args
+    user_files = ""
+    user_filter_files = ""
+    for i in range(0, len(sys.argv)):
+        arg = sys.argv[i]
+        if arg == "-files" or arg == "-filter_files":
+            if i+1 >= len(sys.argv):
+                print("[error] must supply argument after {}".format(sys.argv[i]), flush=True)
+                print_profiles(config_all)
+                sys.exit(1)
+            if arg == "-files":
+                user_files =  sys.argv[i+1]
+            if arg == "-filter_files":
+                user_filter_files = sys.argv[i+1]
+            sys.argv[i] = ""
+            sys.argv[i+1] = ""
+
+    # rm special args
     for arg in reversed(special_args):
         if arg not in sys.argv:
             special_args.remove(arg)
@@ -1364,7 +1415,7 @@ def main():
         profile = sys.argv[profile_pos]
         config = config_all[sys.argv[profile_pos]]
     else:
-        config = config_all
+        config = dict(config_all)
 
     # print pmbuild top level help
     config_all["special_args"] = special_args
@@ -1404,6 +1455,8 @@ def main():
     if profile_pos < len(sys.argv):
         config["user_vars"]["profile"] = sys.argv[profile_pos]
         config["user_vars"]["cwd"] = os.getcwd()
+    elif build_mode == "pmbuild tool":
+        config["user_vars"]["cwd"] = os.getcwd()
     else:
         print("[error] missing valid pmbuild profile as first positional argument", flush=True)
         print_profiles(config_all)
@@ -1412,11 +1465,22 @@ def main():
     # inject task keys, to allow alias jobs and multiple runs of the same thing
     for task_name in config.keys():
         task = config[task_name]
-        if "type" not in task.keys():
-            config[task_name]["type"] = task_name
+        if type(task) == dict:
+            if "type" not in task.keys():
+                config[task_name]["type"] = task_name
 
     config["special_args"] = special_args
     config["user_args"] =  user_args
+
+    # custom filter
+    if len(user_filter_files) > 0:
+        config["user_filter_files"] = user_filter_files
+
+    # custom files
+    if len(user_files) > 0:
+        config["tool"] = dict()
+        files = jsn.loads("{files:" + user_files + "}")
+        config["tool"]["files"] = files["files"]
 
     # verbosity indicator
     util.log_lvl("user_vars:", config, "-verbose")
@@ -1454,6 +1518,16 @@ def main():
     elif sys.argv[1] == "launch":
         mf = get_task_files(config, "launch")
         launch(config, mf, sys.argv[3:])
+    elif sys.argv[1] == "tool":
+        tool = sys.argv[2]
+        if tool not in config_all["tools"]:
+            print("[error] cannot find an associated tool or script for {}".format(tool))
+            print("        add the tool and path to pmbuild_init.jsn")
+            sys.exit(1)
+        tf = get_task_files(config, "tool")
+        if len(tf) == 0:
+            tf = [("", "")]
+        run_tool_standalone(config, tool, tf)
     else:
         # add extensions
         if "extensions" in config_all.keys():
