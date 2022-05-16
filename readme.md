@@ -238,7 +238,7 @@ You can also pass `-vars` to pmbuild from the commandline as a string of jsn:
 pmbuild profile -vars "var_bool: true, var_int: 1, var_string:'test', var_obj:{key: value}"
 ```
 
-# Copy
+# Copy / Files
 
 You can copy files with a copy task, this is often necessary to move files into a data directory or deploy to a dev kit, simply specify an array of file pairs (source, destination) in a task of type copy. Here you can supply [glob](https://docs.python.org/3/library/glob.html) or [regex](https://docs.python.org/3/library/re.html) to find files, a directory or a single file:
 
@@ -291,7 +291,7 @@ copy-change-ext:
 ```
 You can also specify `excludes` which is an [fnmatch](https://docs.python.org/3/library/fnmatch.html) to further filter files after they are expanded by directory, regex or glob:
 
-```
+```yaml
 texturec: {
     args: [
         "-f %{input_file}"
@@ -309,6 +309,8 @@ texturec: {
     ]
 }
 ```
+
+It is possible to further filter the files processed by using the commandline argument `-filter_files "*.*"` this is an [fnmatch](https://docs.python.org/3/library/fnmatch.html) which you can supply each time you make a commandline invocation. This feature is usefult to isolate certain file extensions `*.lua` or a single file `path/single_file.txt` should you need to run and debug a a tool or process.
 
 # Clean
 
@@ -575,6 +577,20 @@ launch: {
             "bin/win32/*.exe"
         ]
 }
+```
+
+# Tool
+
+You can bypass the need for build profiles and run any of the tools you have registered in your pmbuild `config.jsn`. use the following command and the pass `-args` anything after args is passed directly to the tool.
+
+```
+pmbuild tool ffmpeg -args -i input.mov -c:v libx264 -crf 26 output.mp4
+```
+
+You can also supply `files` from the commandline to process globs, handled in the same way as the files pbject from within a `config.jsn`
+
+```
+pmbuild tool ffmpeg -files "[['source/**.mov'], ['output']]" -args -i %{input_file} -c:v libx264 -crf 26 %{output_file}
 ```
 
 # Network Connections / Credentials
