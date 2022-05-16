@@ -1457,6 +1457,7 @@ def main():
         config["user_vars"]["cwd"] = os.getcwd()
     elif build_mode == "pmbuild tool":
         config["user_vars"]["cwd"] = os.getcwd()
+        config["tool"] = dict()
     else:
         print("[error] missing valid pmbuild profile as first positional argument", flush=True)
         print_profiles(config_all)
@@ -1478,7 +1479,6 @@ def main():
 
     # custom files
     if len(user_files) > 0:
-        config["tool"] = dict()
         files = jsn.loads("{files:" + user_files + "}")
         config["tool"]["files"] = files["files"]
 
@@ -1524,9 +1524,11 @@ def main():
             print("[error] cannot find an associated tool or script for {}".format(tool))
             print("        add the tool and path to pmbuild_init.jsn")
             sys.exit(1)
-        tf = get_task_files(config, "tool")
-        if len(tf) == 0:
-            tf = [("", "")]
+        print(config_all)
+        tf = [("", "")]
+
+        if "files" in config["tool"]:
+            tf = get_task_files(config, "tool")
         run_tool_standalone(config, tool, tf)
     else:
         # add extensions
