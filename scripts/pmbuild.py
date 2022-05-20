@@ -1360,6 +1360,7 @@ def main():
                 commandline_vars[key] = j[key]
             # passes -vars to commandline_vars to forward the whole thing
             commandline_vars["commandline_vars"] = "\"" + sys.argv[a+1] + "\""
+            commandline_vars["commandline_vars_escaped"] = "\\\"" + sys.argv[a+1] + "\\\""
             rm.append(a)
             rm.append(a+1)
     
@@ -1565,9 +1566,10 @@ def main():
         # run tasks
         for task_name in runnable_ordered:
             task = config[task_name]
+            
             # evaluate user vars
             task_string = json.dumps(task, indent=4)
-            task_string = evaluate_user_vars( task_string, config )
+            task_string = evaluate_user_vars(task_string, config)
             task = json.loads(task_string)
             config[task_name] = task
 
