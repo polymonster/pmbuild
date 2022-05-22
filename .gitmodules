@@ -6,7 +6,7 @@
 	url = https://github.com/polymonster/cgu.git
 [submodule "scripts/premake-android-studio"]
 	path = scripts/premake-android-studio
-	url = https://github.com/flavourworks/premake-android-studio.git
+	url = https://github.com/polymonster/premake-android-studio.git
 [submodule "scripts/pmfx-shader"]
 	path = scripts/pmfx-shader
 	url = https://github.com/polymonster/pmfx-shader.git
