@@ -1,3 +1,4 @@
+from textwrap import indent
 import time
 import json
 import sys
@@ -1601,6 +1602,53 @@ def main():
                 print("        add the tool and path to pmbuild_init.jsn")
 
     util.print_duration(start_time)
+
+
+# update executables for registered tools from git hub releases 
+def update_github_release():
+    import requests
+    # to be driven by config
+    tag_name = "latest"
+    name = "Windows-x64.zip"
+    # fetch the release list
+    headers = {
+        "Accept": "application/vnd.github.v3+json"
+    }
+    res = requests.get('https://api.github.com/repos/polymonster/pmfx-shader/releases', headers=headers)
+    # search for the release, or fetch latest
+    found = False
+    url = ""
+    for release in res.json():
+        if tag_name != "latest":
+            if "tag_name" in release:
+                if release["tag_name"] != tag_name:
+                    continue
+        if "tag_name" in release:
+            tag_name = release["tag_name"]
+        if "assets" in release:
+            for asset in release["assets"]:
+                if "name" in asset:
+                    if asset["name"] == name:
+                        url = asset["url"]
+                        found = True
+                        break
+        if found:
+            break
+    # return early if we find nothing
+    if not found:
+        print("[error] could not find a release for tool")
+        return
+    print("downloading release {} {}".format(tag_name, name))
+    # download release
+    local_filename = name
+    res = requests.get(url, stream=True)
+    with open(local_filename, 'wb') as f:
+        for chunk in res.iter_content(chunk_size=1024): 
+            if chunk:
+                f.write(chunk)
+    if os.path.splitext(name)[1] == ".zip":
+        with zipfile.ZipFile(local_filename, 'r') as zip_ref:
+            zip_ref.extractall(".")
 
 
 # entry point of pmbuild
