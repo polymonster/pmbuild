@@ -20,7 +20,7 @@ import dependencies
 import jsn.jsn as jsn
 import cgu.cgu as cgu
 
-from http.server import HTTPServer, CGIHTTPRequestHandler
+from http.server import HTTPServer, CGIHTTPRequestHandler, executable
 
 # exit's on error but allows user to choose not to
 def error_exit(config):
@@ -1342,6 +1342,9 @@ def main():
     elif sys.argv[1] == "tool":
         build_mode = "pmbuild " + sys.argv[1]
         profile_pos = len(sys.argv)
+    elif sys.argv[1] == "update":
+        update_tools(config_all)
+        return
 
     # add implicit all
     implicit_all = False
@@ -1605,19 +1608,19 @@ def main():
 
 
 # update executables for registered tools from git hub releases 
-def update_github_release():
+def update_github_release(tool_config):
+    # to avoid requiring pip setup
     import requests
-    # to be driven by config
-    tag_name = "latest"
-    name = "Windows-x64.zip"
     # fetch the release list
     headers = {
         "Accept": "application/vnd.github.v3+json"
     }
-    res = requests.get('https://api.github.com/repos/polymonster/pmfx-shader/releases', headers=headers)
+    res = requests.get(tool_config["repository"], headers=headers)
     # search for the release, or fetch latest
     found = False
     url = ""
+    tag_name = tool_config["tag_name"]
+    asset_name = tool_config["asset_name"]
     for release in res.json():
         if tag_name != "latest":
             if "tag_name" in release:
@@ -1628,7 +1631,7 @@ def update_github_release():
         if "assets" in release:
             for asset in release["assets"]:
                 if "name" in asset:
-                    if asset["name"] == name:
+                    if asset["name"] == asset_name:
                         url = asset["url"]
                         found = True
                         break
@@ -1638,17 +1641,71 @@ def update_github_release():
     if not found:
         print("[error] could not find a release for tool")
         return
-    print("downloading release {} {}".format(tag_name, name))
-    # download release
-    local_filename = name
+    # get download url
+    res = requests.get(url)
+    asset_json = res.json()
+    if "browser_download_url" not in asset_json:
+        print("[error] {} {} does not have download url".format(tag_name, asset_name))
+        return
+    # download
+    print("downloading {} {} ({})".format(tool_config["name"], tag_name, asset_name))
+    url = asset_json["browser_download_url"]
+    # download release, write to file
+    location = tool_config["location"]
+    os.makedirs(location, exist_ok=True)
+    local_filename = os.path.join(location, asset_name)
     res = requests.get(url, stream=True)
     with open(local_filename, 'wb') as f:
         for chunk in res.iter_content(chunk_size=1024): 
             if chunk:
                 f.write(chunk)
-    if os.path.splitext(name)[1] == ".zip":
+    # unzip
+    if os.path.splitext(asset_name)[1] == ".zip":
         with zipfile.ZipFile(local_filename, 'r') as zip_ref:
-            zip_ref.extractall(".")
+            zip_ref.extractall(location)
+        # cleanup the zip
+        os.remove(local_filename)
+
+
+# updates pmbuild standalone executable
+def update_self():
+    if not getattr(sys, 'frozen', False):
+        print("[error] cannot update python script pmbuild, update must be used on frozen executable")
+    executable_name = {
+        "windows": "Windows-x64.zip",
+        "mac": "macOS-x64.zip"
+    }
+    plat = util.get_platform_name()
+    if plat not in executable_name:
+        print("[error] unsupported platform")
+    tool_config = {
+        "tag_name": "latest",
+        "location": os.path.dirname(sys.executable),
+        "repository": 'https://api.github.com/repos/polymonster/pmbuild/releases',
+        "name": executable_name[plat]
+    }
+    update_github_release(tool_config)
+
+
+# update all tools
+def update_tools(config_all):
+    print("updating pmbuild tools")
+    requires = [
+        "tag_name",
+        "repository",
+        "asset_name",
+    ]
+    if "tools_update" in config_all and "tools" in config_all:
+        for tool in  config_all["tools_update"]:
+            if tool in config_all["tools"]:
+                for req in requires:
+                    if req not in config_all["tools_update"][tool]:
+                        print("[error] require field {} in tools_update for {}".format(req, tool))
+                        sys.exit(1)
+                tool_config = config_all["tools_update"][tool]
+                tool_config["location"] = os.path.dirname(config_all["tools"][tool])
+                tool_config["name"] = tool
+                update_github_release(tool_config)
 
 
 # entry point of pmbuild
