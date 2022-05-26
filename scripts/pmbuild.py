@@ -1608,7 +1608,7 @@ def main():
 
 
 # update executables for registered tools from git hub releases 
-def update_github_release(tool_config):
+def update_github_release(tool_config, is_self=False):
     # to avoid requiring pip setup
     import requests
     # fetch the release list
@@ -1660,6 +1660,8 @@ def update_github_release(tool_config):
             if chunk:
                 f.write(chunk)
     # unzip
+    if is_self:
+        os.rename(sys.executable, sys.executable + ".old")
     if os.path.splitext(asset_name)[1] == ".zip":
         with zipfile.ZipFile(local_filename, 'r') as zip_ref:
             zip_ref.extractall(location)
@@ -1669,6 +1671,7 @@ def update_github_release(tool_config):
 
 # updates pmbuild standalone executable
 def update_self():
+    print("updating pmbuild")
     if not getattr(sys, 'frozen', False):
         print("[error] cannot update python script pmbuild, update must be used on frozen executable")
     executable_name = {
@@ -1682,13 +1685,15 @@ def update_self():
         "tag_name": "latest",
         "location": os.path.dirname(sys.executable),
         "repository": 'https://api.github.com/repos/polymonster/pmbuild/releases',
-        "name": executable_name[plat]
+        "asset_name": executable_name[plat],
+        "name": "pmbuild"
     }
-    update_github_release(tool_config)
+    update_github_release(tool_config, is_self=True)
 
 
 # update all tools
 def update_tools(config_all):
+    update_self()
     print("updating pmbuild tools")
     requires = [
         "tag_name",
