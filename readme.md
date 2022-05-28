@@ -391,6 +391,22 @@ Run your own tools or scripts and feed them files with the `files` objects as de
 }
 ```
 
+## Update Tools
+
+If you are using tools that are released via GitHub releases you can update pmbuild (itself) and any GitHub releases by registering tools update information to your config.
+
+```yaml
+tools_update: {
+    pmfx: {
+        tag_name: latest
+        repository: "https://api.github.com/repos/polymonster/pmfx-shader/releases"
+        asset_name<windows>: Windows-x64.zip
+    }
+}
+```
+
+Run `pmbuild update` to update any tools to `latest` versions or specific tagged version using the `tag_name` parameter.
+
 # Extension Python Modules
 
 You can register and call extension modules written in python, specify a path to the python module directory, the module name (.py file) and a function name to invoke when the build runs:
