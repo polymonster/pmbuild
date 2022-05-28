@@ -1291,6 +1291,9 @@ def main():
     if os.path.exists("config2.jsn"):
         config_file = "config2.jsn"
 
+    # book keeping
+    cleanup_update()
+
     # must have config.json in working directory
     if not os.path.exists(config_file):
         print("[error] no config.jsn in current directory.")
@@ -1667,6 +1670,14 @@ def update_github_release(tool_config, is_self=False):
             zip_ref.extractall(location)
         # cleanup the zip
         os.remove(local_filename)
+
+
+# cleanup .old executable file
+def cleanup_update():
+    if not getattr(sys, 'frozen', False):
+        return
+    if os.path.exists(sys.executable + ".old"):
+        os.remove(sys.executable + ".old")
 
 
 # updates pmbuild standalone executable
