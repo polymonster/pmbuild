@@ -1287,6 +1287,11 @@ def generate_build_order(config, config_all, all):
 def main():
     start_time = time.time()
 
+    # force help on no args
+    if len(sys.argv) == 1:
+        sys.argv.append("-help")
+
+    # backward compatibility
     config_file = "config.jsn"
     if os.path.exists("config2.jsn"):
         config_file = "config2.jsn"
