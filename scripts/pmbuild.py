@@ -877,7 +877,10 @@ def run_tool(config, task_name, tool, files):
         if e == 0 and deps:
             dependencies.write_to_file_single(d, file[1])
         if e != 0:
-            print("[error] processing file " + file[0])
+            if len(file[0]) > 0:
+                print("[error] processing file " + file[0])
+            else:
+                print("[error] processing task {}".format(task_name))
             error_exit(config)
 
 
