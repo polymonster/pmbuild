@@ -681,6 +681,10 @@ def expand_rules_files(export_config, task_name, subdir):
         for rule in rules.keys():
             rules_order.append(rule)
 
+    # print rules order
+    if len(rules_order) > 0:
+        print("rules_order:" + str(rules_order))
+
     # apply rules in order, overriding by the last rule
     for rule in rules_order:
         rule_config = rules[rule]
@@ -707,6 +711,8 @@ def expand_rules_files(export_config, task_name, subdir):
             rule_config.pop("preset")
     if "presets" in export_config[task_name]:
         export_config[task_name].pop("presets")
+    if "rules_order" in export_config[task_name]:
+        export_config[task_name].pop("rules_order")
 
 
 # look for export.json in directory tree, combine and override exports by depth, override further by rules
