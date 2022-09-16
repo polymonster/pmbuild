@@ -658,17 +658,10 @@ def get_task_files(config, task_name):
     return pairs
 
 
-# returns expanded list of file from matches where each list element of files can be a glob, regex match or single file
-def expand_rules_files(export_config, task_name, subdir):
-    if task_name not in export_config:
-        return
-    if "rules" not in export_config[task_name]:
-        return
-    rules = export_config[task_name]["rules"]
-    if "presets" in export_config[task_name]:
-        presets = export_config[task_name]["presets"]
-
+# return ordered rules based on 'rules_order' or returning the dictionary order if rules order isnt present
+def get_ordered_rules(export_config, task_name):
     # force rule order if specified
+    rules = export_config[task_name]["rules"]
     rules_order = []
     if "rules_order" in export_config[task_name]:
         config_rules_order = export_config[task_name]["rules_order"]
@@ -680,10 +673,21 @@ def expand_rules_files(export_config, task_name, subdir):
     else:
         for rule in rules.keys():
             rules_order.append(rule)
+    return rules_order
 
-    # print rules order
-    if len(rules_order) > 0:
-        print("rules_order:" + str(rules_order))
+
+# returns expanded list of file from matches where each list element of files can be a glob, regex match or single file
+def expand_rules_files(export_config, task_name, subdir):
+    if task_name not in export_config:
+        return
+    if "rules" not in export_config[task_name]:
+        return
+    rules = export_config[task_name]["rules"]
+    if "presets" in export_config[task_name]:
+        presets = export_config[task_name]["presets"]
+
+    # force rule order if specified
+    rules_order = get_ordered_rules(export_config, task_name)
 
     # apply rules in order, overriding by the last rule
     for rule in rules_order:
@@ -711,8 +715,6 @@ def expand_rules_files(export_config, task_name, subdir):
             rule_config.pop("preset")
     if "presets" in export_config[task_name]:
         export_config[task_name].pop("presets")
-    if "rules_order" in export_config[task_name]:
-        export_config[task_name].pop("rules_order")
 
 
 # look for export.json in directory tree, combine and override exports by depth, override further by rules
@@ -748,9 +750,10 @@ def apply_export_config_rules(export_config, task_name, filename):
             continue
         file_config[key] = cfg[key]
     if "rules" in export_config[task_name]:
+        rules_order = get_ordered_rules(export_config, task_name)
         rules = export_config[task_name]["rules"]
         override_rule = dict()
-        for rule in rules.keys():
+        for rule in rules_order:
             rule_config = rules[rule]
             files = rule_config["files"]
             if filename in files:
@@ -758,6 +761,7 @@ def apply_export_config_rules(export_config, task_name, filename):
         if override_rule:
             util.merge_dicts(file_config, override_rule)
             file_config.pop("files", None)
+            file_config.pop("rules_order", None)
     return file_config
 
 
@@ -892,7 +896,6 @@ def run_tool(config, task_name, tool, files):
 
 # run tool standalone
 def run_tool_standalone(config, tool, files):
-    print(files)
     exe = util.sanitize_file_path(config["tools"][tool])
     for file in files:
         cmd = exe + " "
@@ -1418,7 +1421,6 @@ def main():
             sys.argv.remove(arg)
 
     # add implicit all
-    print(sys.argv)
     if len(sys.argv) == 2 and profile_pos == 1:
         special_args.append("-all")
 
