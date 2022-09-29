@@ -224,12 +224,13 @@ pmbuild also provides special variables evaluated with percentage sign as so `%{
 ```
 %{profile} = current building profile (ie mac, win32, linux etc)
 %{cwd} = current working directory
+%{username} = user name of the machine
+%{home_dir} = user home directory ie. `/Users/username/` or `C:\Users\username`
+%{vs_latest} = locates the latest installation of visual studio ie (vs2019)
+%{windows_sdk_version} = finds latest windows sdk version
 %{input_file} = input file from "files" object
 %{output_file} = output file from "files" object
 %{export_args} = arguments per file from export.jsn
-%{vs_latest} = locates the latest installation of visual studio ie (vs2019)
-%{windows_sdk_version} = finds latest windows sdk version
-%{teamid} = apple developer team id (will prompt for input if not present)
 ```
 
 You can also pass `-vars` to pmbuild from the commandline as a string of jsn:

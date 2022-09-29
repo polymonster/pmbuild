@@ -14,6 +14,7 @@ import threading
 import webbrowser
 import fnmatch
 import zipfile
+import getpass
 
 import util
 import dependencies
@@ -876,7 +877,10 @@ def run_tool(config, task_name, tool, files):
         if e == 0 and deps:
             dependencies.write_to_file_single(d, file[1])
         if e != 0:
-            print("[error] processing file " + file[0])
+            if len(file[0]) > 0:
+                print("[error] processing file " + file[0])
+            else:
+                print("[error] processing task {}".format(task_name))
             error_exit(config)
 
 
@@ -1354,11 +1358,6 @@ def main():
         update_tools(config_all)
         return
 
-    # add implicit all
-    implicit_all = False
-    if len(sys.argv) == 2 and profile_pos == 1:
-        implicit_all = True
-
     # extract vars
     commandline_vars = dict()
     rm = []
@@ -1375,6 +1374,10 @@ def main():
             commandline_vars["commandline_vars_escaped"] = "\\\"" + sys.argv[a+1] + "\\\""
             rm.append(a)
             rm.append(a+1)
+
+    # remove vars from the main cmd line... allows implicit all to work
+    for r in reversed(rm):
+        sys.argv.pop(r)
     
     # extract extra -args
     user_args = []
@@ -1408,7 +1411,9 @@ def main():
         else:
             sys.argv.remove(arg)
 
-    if implicit_all:
+    # add implicit all
+    print(sys.argv)
+    if len(sys.argv) == 2 and profile_pos == 1:
         special_args.append("-all")
 
     # special modes
@@ -1475,6 +1480,10 @@ def main():
         print("[error] missing valid pmbuild profile as first positional argument", flush=True)
         print_profiles(config_all)
         sys.exit(1)
+
+    # get machine user name and home dir
+    config["user_vars"]["username"] = getpass.getuser()
+    config["user_vars"]["home_dir"] = os.path.expanduser("~")
 
     # inject task keys, to allow alias jobs and multiple runs of the same thing
     for task_name in config.keys():
