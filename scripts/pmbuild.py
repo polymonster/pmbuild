@@ -762,6 +762,9 @@ def apply_export_config_rules(export_config, task_name, filename):
             util.merge_dicts(file_config, override_rule)
             file_config.pop("files", None)
             file_config.pop("rules_order", None)
+        else:
+            print("[warning] failed finding an export rule!", flush=True)
+            file_config.pop("rules_order", None)
     return file_config
 
 
