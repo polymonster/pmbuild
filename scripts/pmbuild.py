@@ -718,7 +718,10 @@ def expand_rules_files(export_config, task_name, subdir):
 
 
 # look for export.json in directory tree, combine and override exports by depth, override further by rules
+cached_export_configs = {}
 def export_config_for_directory(task_name, directory):
+    if task_name not in cached_export_configs:
+        cached_export_configs[task_name] = {}
     file_path = util.sanitize_file_path(directory)
     dirt_tree = file_path.split(os.sep)
     export_dict = dict()
@@ -733,8 +736,12 @@ def export_config_for_directory(task_name, directory):
         subdir = os.path.join(subdir, dirt_tree[i])
         export = os.path.join(subdir, "export.jsn")
         if os.path.exists(export):
-            dir_export_config = jsn.loads(open(export, "r").read())
-            expand_rules_files(dir_export_config, task_name, subdir)
+            if export in cached_export_configs[task_name]:
+                dir_export_config = cached_export_configs[task_name][export]
+            else:
+                dir_export_config = jsn.loads(open(export, "r").read())
+                expand_rules_files(dir_export_config, task_name, subdir)
+                cached_export_configs[task_name][export] = dir_export_config
             util.merge_dicts(export_dict, dir_export_config)
     return export_dict
 
