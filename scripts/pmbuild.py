@@ -1642,7 +1642,7 @@ def main():
     util.print_duration(start_time)
 
 
-# update executables for registered tools from git hub releases 
+# update executables for registered tools from git hub releases
 def update_github_release(tool_config, is_self=False):
     # to avoid requiring pip setup
     import requests
@@ -1650,6 +1650,10 @@ def update_github_release(tool_config, is_self=False):
     headers = {
         "Accept": "application/vnd.github.v3+json"
     }
+    
+    if "auth_token" in tool_config:
+        headers = { "Accept": "application/vnd.github.v3+json", "Authorization": "token " + tool_config["auth_token"] }
+        
     res = requests.get(tool_config["repository"], headers=headers)
     # search for the release, or fetch latest
     found = False
@@ -1676,22 +1680,31 @@ def update_github_release(tool_config, is_self=False):
     if not found:
         print("[error] could not find a release for tool")
         return
-    # get download url
-    res = requests.get(url)
-    asset_json = res.json()
-    if "browser_download_url" not in asset_json:
-        print("[error] {} {} does not have download url".format(tag_name, asset_name))
-        return
-    # download
-    print("downloading {} {} ({})".format(tool_config["name"], tag_name, asset_name))
-    url = asset_json["browser_download_url"]
+
+    if "auth_token" in tool_config:
+        # if using an auth token to access a private repository stream using the assets url
+        headers = { "Accept": "application/octet-stream", "Authorization": "token " + tool_config["auth_token"] }
+        print("downloading {} {} ({})".format(tool_config["name"], tag_name, asset_name))
+        res = requests.get(url, headers=headers, stream=True)
+    else:
+        # get download url
+        res = requests.get(url, headers=headers)
+        asset_json = res.json()
+        if "browser_download_url" not in asset_json:
+            print("[error] {} {} does not have download url".format(tag_name, asset_name))
+            return
+        # download
+        print("downloading {} {} ({})".format(tool_config["name"], tag_name, asset_name))
+        url = asset_json["browser_download_url"]
+        res = requests.get(url, stream=True)
+        
     # download release, write to file
     location = tool_config["location"]
     os.makedirs(location, exist_ok=True)
     local_filename = os.path.join(location, asset_name)
-    res = requests.get(url, stream=True)
+
     with open(local_filename, 'wb') as f:
-        for chunk in res.iter_content(chunk_size=1024): 
+        for chunk in res.iter_content(chunk_size=1024):
             if chunk:
                 f.write(chunk)
     # unzip
