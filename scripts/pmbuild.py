@@ -1373,7 +1373,7 @@ def main():
     elif sys.argv[1] == "tool":
         build_mode = "pmbuild " + sys.argv[1]
         profile_pos = len(sys.argv)
-    elif sys.argv[1] == "update":
+    elif sys.argv[1] == "update" or sys.argv[1] == "tools_update":
         update_tools(config_all)
         return
 
