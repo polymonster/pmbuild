@@ -799,7 +799,7 @@ def replace_user_vars(arg, config):
             if uv not in config["user_vars"]:
                 print("[error] missing variable " + uv)
                 error_exit(config)
-            arg = arg.replace(v, config["user_vars"][uv])
+            arg = arg.replace(v, str(config["user_vars"][uv]))
     return arg
 
 
@@ -838,7 +838,7 @@ def evaluate_user_vars(raw_config, config):
         if "user_vars" not in config.keys() or var not in config["user_vars"]:
             print( "[warning] user var '{}' not defined".format(var))
             continue
-        raw_config = raw_config.replace("%{"+var+"}",config["user_vars"][var])
+        raw_config = raw_config.replace("%{"+var+"}", str(config["user_vars"][var]))
     return raw_config
 
 
