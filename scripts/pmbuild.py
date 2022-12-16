@@ -435,6 +435,20 @@ def move(config, task_name, files):
         shutil.move(file[0], file[1])
 
 
+# detab
+def detab(config, task_name, files):
+    for file in files:
+        print("detabbing: {}".format(file[0]))
+        file_data = open(file[0], "r").read()
+        file_data = file_data.replace("\t", " " * config[task_name]["num_spaces"])
+        file_lines = file_data.split("\n")
+        file_data_lines = ""
+        for line in file_lines:
+            line = line.rstrip()
+            file_data_lines += line + "\n"
+        open(file[0], "w+").write(file_data_lines)
+
+
 # zips files into a destination folder, only updating if newer
 def zip(config, task_name, files):
     unique_zips = dict()
@@ -1549,7 +1563,8 @@ def main():
         "zip": zip,
         "pmbuild_config": generate_pmbuild_config,
         "vscode": vscode_build,
-        "delete_orphans": dependencies.delete_orphans
+        "delete_orphans": dependencies.delete_orphans,
+        "detab": detab
     }
 
     if sys.argv[1] == "make":
