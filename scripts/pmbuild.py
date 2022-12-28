@@ -1194,7 +1194,8 @@ def pmbuild_help(config):
     print("    -filter_files (additional fnmatch to filter files expanded by files object, to isolate and build individual files or pattern matches).")
     print("\nsettings:")
     print("    pmbuild -credentials (creates a jsn file to allow input and encryption of user names and passwords).")
-    print_profiles(config)
+    if config:
+        print_profiles(config)
 
 
 # profile help
@@ -1305,8 +1306,10 @@ def main():
 
     # must have config.json in working directory
     if not os.path.exists(config_file):
-        print("[error] no config.jsn in current directory.")
-        print(sys.argv)
+        if "-help" in sys.argv:
+            pmbuild_help(None)
+        print("", flush=True)
+        print("[pmbuild] no config.jsn in current directory.", flush=True)
         sys.exit(1)
 
     # read jsn
@@ -1412,9 +1415,9 @@ def main():
             sys.argv.remove(arg)
 
     # add implicit all
-    print(sys.argv)
-    if len(sys.argv) == 2 and profile_pos == 1:
-        special_args.append("-all")
+    if "-help" not in special_args:
+        if len(sys.argv) == 2 and profile_pos == 1:
+            special_args.append("-all")
 
     # special modes
     if "-credentials" in special_args:
