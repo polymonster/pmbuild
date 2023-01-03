@@ -208,8 +208,12 @@ def check_up_to_date_single(dest_file, deps):
             if not os.path.exists(dest_file):
                 print("new file: " + os.path.basename(dest_file), flush=True)
                 return False
+            # input file is now missing
+            if not os.path.exists(input_file["name"]):
+                print(os.path.basename(dest_file) + ": is out-of-date.", flush=True)
+                return False
             # output file is out of date
-            if os.path.getmtime(input_file["name"]) > dep_ts:
+            if os.path.exists(input_file["name"]) and os.path.getmtime(input_file["name"]) > dep_ts:
                 print(os.path.basename(dest_file) + ": is out-of-date.", flush=True)
                 return False
     print(os.path.basename(dest_file) + ": up-to-date", flush=True)

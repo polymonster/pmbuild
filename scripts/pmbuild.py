@@ -435,6 +435,20 @@ def move(config, task_name, files):
         shutil.move(file[0], file[1])
 
 
+# detab
+def detab(config, task_name, files):
+    for file in files:
+        print("detabbing: {}".format(file[0]))
+        file_data = open(file[0], "r").read()
+        file_data = file_data.replace("\t", " " * config[task_name]["num_spaces"])
+        file_lines = file_data.split("\n")
+        file_data_lines = ""
+        for line in file_lines:
+            line = line.rstrip()
+            file_data_lines += line + "\n"
+        open(file[0], "w+").write(file_data_lines)
+
+
 # zips files into a destination folder, only updating if newer
 def zip(config, task_name, files):
     unique_zips = dict()
@@ -658,17 +672,10 @@ def get_task_files(config, task_name):
     return pairs
 
 
-# returns expanded list of file from matches where each list element of files can be a glob, regex match or single file
-def expand_rules_files(export_config, task_name, subdir):
-    if task_name not in export_config:
-        return
-    if "rules" not in export_config[task_name]:
-        return
-    rules = export_config[task_name]["rules"]
-    if "presets" in export_config[task_name]:
-        presets = export_config[task_name]["presets"]
-
+# return ordered rules based on 'rules_order' or returning the dictionary order if rules order isnt present
+def get_ordered_rules(export_config, task_name):
     # force rule order if specified
+    rules = export_config[task_name]["rules"]
     rules_order = []
     if "rules_order" in export_config[task_name]:
         config_rules_order = export_config[task_name]["rules_order"]
@@ -680,6 +687,21 @@ def expand_rules_files(export_config, task_name, subdir):
     else:
         for rule in rules.keys():
             rules_order.append(rule)
+    return rules_order
+
+
+# returns expanded list of file from matches where each list element of files can be a glob, regex match or single file
+def expand_rules_files(export_config, task_name, subdir):
+    if task_name not in export_config:
+        return
+    if "rules" not in export_config[task_name]:
+        return
+    rules = export_config[task_name]["rules"]
+    if "presets" in export_config[task_name]:
+        presets = export_config[task_name]["presets"]
+
+    # force rule order if specified
+    rules_order = get_ordered_rules(export_config, task_name)
 
     # apply rules in order, overriding by the last rule
     for rule in rules_order:
@@ -710,7 +732,10 @@ def expand_rules_files(export_config, task_name, subdir):
 
 
 # look for export.json in directory tree, combine and override exports by depth, override further by rules
+cached_export_configs = {}
 def export_config_for_directory(task_name, directory):
+    if task_name not in cached_export_configs:
+        cached_export_configs[task_name] = {}
     file_path = util.sanitize_file_path(directory)
     dirt_tree = file_path.split(os.sep)
     export_dict = dict()
@@ -725,8 +750,12 @@ def export_config_for_directory(task_name, directory):
         subdir = os.path.join(subdir, dirt_tree[i])
         export = os.path.join(subdir, "export.jsn")
         if os.path.exists(export):
-            dir_export_config = jsn.loads(open(export, "r").read())
-            expand_rules_files(dir_export_config, task_name, subdir)
+            if export in cached_export_configs[task_name]:
+                dir_export_config = cached_export_configs[task_name][export]
+            else:
+                dir_export_config = jsn.loads(open(export, "r").read())
+                expand_rules_files(dir_export_config, task_name, subdir)
+                cached_export_configs[task_name][export] = dir_export_config
             util.merge_dicts(export_dict, dir_export_config)
     return export_dict
 
@@ -742,9 +771,10 @@ def apply_export_config_rules(export_config, task_name, filename):
             continue
         file_config[key] = cfg[key]
     if "rules" in export_config[task_name]:
+        rules_order = get_ordered_rules(export_config, task_name)
         rules = export_config[task_name]["rules"]
         override_rule = dict()
-        for rule in rules.keys():
+        for rule in rules_order:
             rule_config = rules[rule]
             files = rule_config["files"]
             if filename in files:
@@ -752,6 +782,10 @@ def apply_export_config_rules(export_config, task_name, filename):
         if override_rule:
             util.merge_dicts(file_config, override_rule)
             file_config.pop("files", None)
+            file_config.pop("rules_order", None)
+        else:
+            print("[warning] failed finding an export rule!", flush=True)
+            file_config.pop("rules_order", None)
     return file_config
 
 
@@ -779,7 +813,7 @@ def replace_user_vars(arg, config):
             if uv not in config["user_vars"]:
                 print("[error] missing variable " + uv)
                 error_exit(config)
-            arg = arg.replace(v, config["user_vars"][uv])
+            arg = arg.replace(v, str(config["user_vars"][uv]))
     return arg
 
 
@@ -818,7 +852,7 @@ def evaluate_user_vars(raw_config, config):
         if "user_vars" not in config.keys() or var not in config["user_vars"]:
             print( "[warning] user var '{}' not defined".format(var))
             continue
-        raw_config = raw_config.replace("%{"+var+"}",config["user_vars"][var])
+        raw_config = raw_config.replace("%{"+var+"}", str(config["user_vars"][var]))
     return raw_config
 
 
@@ -886,7 +920,6 @@ def run_tool(config, task_name, tool, files):
 
 # run tool standalone
 def run_tool_standalone(config, tool, files):
-    print(files)
     exe = util.sanitize_file_path(config["tools"][tool])
     for file in files:
         cmd = exe + " "
@@ -1415,7 +1448,7 @@ def main():
             sys.argv.remove(arg)
 
     # add implicit all
-    if "-help" not in special_args:
+    if "-help" not in special_args and "-clean" not in special_args:
         if len(sys.argv) == 2 and profile_pos == 1:
             special_args.append("-all")
 
@@ -1534,7 +1567,8 @@ def main():
         "zip": zip,
         "pmbuild_config": generate_pmbuild_config,
         "vscode": vscode_build,
-        "delete_orphans": dependencies.delete_orphans
+        "delete_orphans": dependencies.delete_orphans,
+        "detab": detab
     }
 
     if sys.argv[1] == "make":
@@ -1627,7 +1661,7 @@ def main():
     util.print_duration(start_time)
 
 
-# update executables for registered tools from git hub releases 
+# update executables for registered tools from git hub releases
 def update_github_release(tool_config, is_self=False):
     # to avoid requiring pip setup
     import requests
@@ -1635,6 +1669,10 @@ def update_github_release(tool_config, is_self=False):
     headers = {
         "Accept": "application/vnd.github.v3+json"
     }
+    
+    if "auth_token" in tool_config:
+        headers = { "Accept": "application/vnd.github.v3+json", "Authorization": "token " + tool_config["auth_token"] }
+        
     res = requests.get(tool_config["repository"], headers=headers)
     # search for the release, or fetch latest
     found = False
@@ -1661,22 +1699,31 @@ def update_github_release(tool_config, is_self=False):
     if not found:
         print("[error] could not find a release for tool")
         return
-    # get download url
-    res = requests.get(url)
-    asset_json = res.json()
-    if "browser_download_url" not in asset_json:
-        print("[error] {} {} does not have download url".format(tag_name, asset_name))
-        return
-    # download
-    print("downloading {} {} ({})".format(tool_config["name"], tag_name, asset_name))
-    url = asset_json["browser_download_url"]
+
+    if "auth_token" in tool_config:
+        # if using an auth token to access a private repository stream using the assets url
+        headers = { "Accept": "application/octet-stream", "Authorization": "token " + tool_config["auth_token"] }
+        print("downloading {} {} ({})".format(tool_config["name"], tag_name, asset_name))
+        res = requests.get(url, headers=headers, stream=True)
+    else:
+        # get download url
+        res = requests.get(url, headers=headers)
+        asset_json = res.json()
+        if "browser_download_url" not in asset_json:
+            print("[error] {} {} does not have download url".format(tag_name, asset_name))
+            return
+        # download
+        print("downloading {} {} ({})".format(tool_config["name"], tag_name, asset_name))
+        url = asset_json["browser_download_url"]
+        res = requests.get(url, stream=True)
+        
     # download release, write to file
     location = tool_config["location"]
     os.makedirs(location, exist_ok=True)
     local_filename = os.path.join(location, asset_name)
-    res = requests.get(url, stream=True)
+
     with open(local_filename, 'wb') as f:
-        for chunk in res.iter_content(chunk_size=1024): 
+        for chunk in res.iter_content(chunk_size=1024):
             if chunk:
                 f.write(chunk)
     # unzip
