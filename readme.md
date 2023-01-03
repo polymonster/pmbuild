@@ -25,6 +25,8 @@ Examples of working [scripts](https://github.com/polymonster/pmtech/blob/master/
 ### Built-in Tasks
 - copy (copy files from src to dst with single files, folders, globs or regex)
 - clean (delete intermediate files)
+- shell (run commands directly in the current shell environment)
+- python (run inline python defined inside a config file)
 - dependencies (track modified times, inouts and output to prevent redundant work)
 - delete_orphans (deletes files which no longer have a source parent in dependencies)
 - connect (smb network connections with credentials)
@@ -56,17 +58,17 @@ You can run from source code as so, which contains submodules used in some of my
 
 pmbuild requires some submodules so please clone recursively:
 
-```
+```text
 git clone https://github.com/polymonster/pmbuild.git --recursive
 ```
 
 When submodules update or new ones are added you can update as follows:
 
-```
+```text
 git submodule update --init --recursive
 ```
 
-# Usage
+## Usage
 
 Add the pmbuild repository directory / executable installation directory to your path for convenience so you can simply invoke `pmbuild`, otherwise you can locate pmbuild manually and run `<path_to_pmbuild>/pmbuild`.
 
@@ -99,7 +101,7 @@ Configs are written in [jsn](https://github.com/polymonster/jsn). Define build `
 
 ## Running Tasks
 
-```
+```text
 # runs build tasks
 pmbuild <profile> <tasks...>
 
@@ -112,7 +114,7 @@ pmbuild launch <profile> <args...>
 
 By default you can run all non-explicit tasks by simply running:
 
-```
+```text
 # run all tasks
 pmbuild <profile>
 
@@ -122,7 +124,7 @@ pmbuild <profile> -all
 
 You can run a single task or a selection of tasks by passing the task name, or you can supply `-n<task_name>` to exclude a task:
 
-```
+```text
 # runs 2 tasks
 pmbuild mac -premake -texturec
 
@@ -130,9 +132,9 @@ pmbuild mac -premake -texturec
 pmbuild mac -all -ncopy
 ```
 
-# Help / Display Available Profiles
+## Help / Display Available Profiles
 
-```
+```text
 pmbuild -help
 usage:
     pmbuild <profile> <tasks...>
@@ -174,9 +176,9 @@ profiles:
         android
 ```
 
-# Display Available Tasks For Profile
+## Display Available Tasks For Profile
 
-```
+```text
 pmbuild <profile> -help
 available tasks for profile mac:
     config.jsn (edit task settings or add new ones in here)
@@ -191,13 +193,13 @@ available tasks for profile mac:
         pmbuild_config
 ```
 
-# Display Help For Task
+## Display Help For Task
 
-```
+```text
 pmbuild <profile> -<task> -help
 ```
 
-# Variables and Inheritence
+## Variables and Inheritence
 
 jsn allows inheritance and variables `${variable}` evaluated with dollar sign where variables are defined in the script. This allows sharing and re-use of tasks to make configs more compact.
 
@@ -217,11 +219,11 @@ jsn allows inheritance and variables `${variable}` evaluated with dollar sign wh
 }
 ```
 
-# Special / User Variables
+## Special / User Variables
 
 pmbuild also provides special variables evaluated with percentage sign as so `%{variable_name}` these are evaluated at runtime, configurable per user and stored in `config.user.jsn` in addition to supplying your own user args there are some built in ones as well:
 
-```
+```text
 %{profile} = current building profile (ie mac, win32, linux etc)
 %{cwd} = current working directory
 %{username} = user name of the machine
@@ -235,11 +237,26 @@ pmbuild also provides special variables evaluated with percentage sign as so `%{
 
 You can also pass `-vars` to pmbuild from the commandline as a string of jsn:
 
-```
+```text
 pmbuild profile -vars "var_bool: true, var_int: 1, var_string:'test', var_obj:{key: value}"
 ```
 
-# Copy / Files
+You can initialise user vars to default values and have the `-vars` passed to the commandline override them as so:
+
+```yaml
+task: {
+    user_vars: {
+        var_or_default: "default_value"
+    }
+    shell: {
+        commands: [
+            "echo %{var_or_default}"
+        ]
+    }
+}
+```
+
+## Copy / Files
 
 You can copy files with a copy task, this is often necessary to move files into a data directory or deploy to a dev kit, simply specify an array of file pairs (source, destination) in a task of type copy. Here you can supply [glob](https://docs.python.org/3/library/glob.html) or [regex](https://docs.python.org/3/library/re.html) to find files, a directory or a single file:
 
@@ -290,6 +307,7 @@ copy-change-ext:
     change_ext: ".newext"
 }
 ```
+
 You can also specify `excludes` which is an [fnmatch](https://docs.python.org/3/library/fnmatch.html) to further filter files after they are expanded by directory, regex or glob:
 
 ```yaml
@@ -313,7 +331,7 @@ texturec: {
 
 It is possible to further filter the files processed by using the commandline argument `-filter_files "*.*"` this is an [fnmatch](https://docs.python.org/3/library/fnmatch.html) which you can supply each time you make a commandline invocation. This feature is usefult to isolate certain file extensions `*.lua` or a single file `path/single_file.txt` should you need to run and debug a a tool or process.
 
-# Clean
+## Clean
 
 Clean out stale data and build from fresh, you can define clean tasks which will delete these directories:
 
@@ -328,10 +346,9 @@ clean: {
 }
 ```
 
-# Tools
+## Tools
 
 Run your own tools or scripts and feed them files with the `files` objects as described in the copy task. We can register different tools for <mac, windows or linux>.
-
 
 ```yaml
 {
@@ -408,7 +425,25 @@ tools_update: {
 
 Run `pmbuild update` to update any tools to `latest` versions or specific tagged version using the `tag_name` parameter.
 
-# Extension Python Modules
+## Shell / Inline Python
+
+You can supply shell commands or inline python inside scripts as so:
+
+```yaml
+shell: {
+    commands: [
+        "echo hello world"
+    ]
+}
+
+python: {
+    code: [
+        "print('hello world!')"
+    ]
+}
+```
+
+## Extension Python Modules
 
 You can register and call extension modules written in python, specify a path to the python module directory, the module name (.py file) and a function name to invoke when the build runs:
 
@@ -428,7 +463,7 @@ extensions: {
 }
 ```
 
-# Export Config Files
+## Export Config Files
 
 You can use `export.jsn` files in data directories to specify per directory or per file command line arguments to run. For example when converting textures we may want certain textures to be converted to a different format to others. export.jsn files override each other hierarchically by directory so you can have a single export.jsn at the root of a directory tree.
 
@@ -472,7 +507,7 @@ You can specify `rules` which select files and apply different settings. jsn inh
 }
 ```
 
-# Dependencies
+## Dependencies
 
 With builds you can choose to output dependency info containing build and file timestamps, the commandline used to build and a list of input and output files used during a build. Add `dependencies: true` to any tool with a `files` object to generate an output `.dep` file for each file that is built, subsequent builds will skip if the dependencies remain up-to-date. Dependency info is output in json and can be used in other tools as well to trigger hot reloading.
 
@@ -491,6 +526,7 @@ render_configs: {
         dependencies: true
 }
 ```
+
 ```json
 {
     "cmdline": "../third_party/pmbuild/bin/mac/texturec -f assets/textures/blend_test_fg.png -t RGBA8 --mips -o bin/osx/data/textures/blend_test_fg.dds ",
@@ -506,8 +542,7 @@ render_configs: {
 }
 ```
 
-
-# Containers
+## Containers
 
 Sometimes in source asset data we may have a collection of files in a directory we want to group together to concatonate or merge them... for instance if we have individual images for cubemap faces and we want to pass them to a tool to spit out a single cubemap texture. Specify container and `files` comprised of an array of filenames or globs, these files will be written into a `.container.txt` file you can forward to other tools.
 
@@ -536,7 +571,7 @@ Sometimes in source asset data we may have a collection of files in a directory 
 }
 ```
 
-# Task Types
+## Task Types
 
 Each task has a type, you can define this using the `type` member, if the name of the task is the same as a tool, extension or built in function then the `type` member is implicitly added.
 
@@ -544,7 +579,7 @@ Each task has a type, you can define this using the `type` member, if the name o
 copy:
 {
     files: [
-    	// ..
+       // ..
     ]
 }
 
@@ -558,11 +593,11 @@ copy-second:
 }
 ```
 
-# Make
+## Make
 
 Make is a special command which is specified before the profile
 
-```
+```text
 pmbuild make <profile> <target>
 ```
 
@@ -577,11 +612,11 @@ make: {
 }
 ```
 
-# Launch
+## Launch
 
 Launch is a special command like make which can be invoked as follows:
 
-```
+```text
 pmbuild launch <profile> <target>
 ```
 
@@ -596,27 +631,27 @@ launch: {
 }
 ```
 
-# Tool
+## Tool
 
 You can bypass the need for build profiles and run any of the tools you have registered in your pmbuild `config.jsn`. use the following command and the pass `-args` anything after args is passed directly to the tool.
 
-```
+```text
 pmbuild tool ffmpeg -args -i input.mov -c:v libx264 -crf 26 output.mp4
 ```
 
 You can also supply `files` from the commandline to process globs, handled in the same way as the files pbject from within a `config.jsn`
 
-```
+```text
 pmbuild tool ffmpeg -files "[['source/**.mov'], ['output']]" -args -i %{input_file} -c:v libx264 -crf 26 %{output_file}
 ```
 
-# Network Connections / Credentials
+## Network Connections / Credentials
 
 In a development environment we may need to synchronise large amounts of data which is stored on a server, or we may need to build artifacts to a server or deploy to a dev kit. we can mount connections to local area network connections via smb. You can supply credentials for the network connects in plain text, or encrypt them with cryptographic quality encryption to be stored and accessed with a password.
 
 To use encrypted credentials you need to install the python cryptography module:
 
-```
+```text
 pip install cryptography
 ```
 
@@ -645,7 +680,7 @@ connect-server:
 
 To add to the credentials file run:
 
-```
+```text
 pmbuild -credentials
 ```
 
@@ -657,7 +692,7 @@ A file `credentials.unlocked.jsn` will be generated in the current working direc
 }
 ```
 
-# Explicit Tasks
+## Explicit Tasks
 
 Tasks can be marked as explicit so that you must specify `-<task_name>` from the commandline and they do not get included automatically with `-all`. This is useful if you have build tasks which you may only need to run infrequently and take a long time to complete. Building third party libraries which are updated infrequently is an example where this can be useful:
 
@@ -674,7 +709,7 @@ libs: {
 }
 ```
 
-# Hidden Profiles and Tasks
+## Hidden Profiles and Tasks
 
 Tasks and profiles which are marked hidden will not be included in the list returned by `pmbuild -help`. The behaviour of the task or profile is not otherwise affected in any way. This is useful for streamlining the list of commands displayed to the user, or for excluding tasks/profiles which are never called explicitly (e.g. ones that are solely used as a base for inheritance). In the example below, setting the base task `copy_videos_base` to hidden and explicit makes it impossible for a user to call this generic version. 
 
@@ -700,7 +735,7 @@ copy_mp4_files(copy_base):
 
 ```
 
-# Enable/Disable Tasks
+## Enable/Disable Tasks
 
 Individual tasks in a given profile can be enabled/disabled by setting `enable: true` or `enable: false`. Tasks default to being enabled, and the enabled value is inherited across profiles. This makes it possible to inherit from a profile and make only certain tasks enabled or disabled. In the example below, `child_profile` would run `task_1` and `task_2`, whereas `base_profile` only runs `task_2`.
 
@@ -733,7 +768,7 @@ child_profile(base_profile):
 
 ```
 
-# Build Order
+## Build Order
 
 By default tasks are built in the order they are specified in the config.jsn files. When using jsn inheritance it may not be clear what the build order might be or you may want to specify an explicit build order. You can do this using the `build_order` lists.
 
@@ -755,7 +790,7 @@ post_build_order" [
 
 Each of the build order lists is optional. If you do not specify a task name in any of the build order lists it will be appended to the `build_order` list.
 
-# vscode
+## vscode
 
 pmbuild can generate `launch.json`, `tasks.json` and `.code-workspace` files for vscode which use pmbuild and a configured make toolchain to build code and launch the exectuable for debugging.
 
@@ -789,4 +824,5 @@ vscode: {
     cwd: "bin/osx"
 }
 ```
+
 You should install the vscode C/C++ extension, install and configure whatever debugger you would like tou use. You can supply different debuggers to the `debugger` member, such as `lldb` (cppdbg) or `gdb` (cppdbg) or `vscode` (cppvsdbg) depending on what you have installed.

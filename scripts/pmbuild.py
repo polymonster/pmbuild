@@ -967,6 +967,23 @@ def shell(config, task_name):
             error_exit(config)
 
 
+# executes python code from commands
+def exec_python(config, task_name):
+    if "code" not in config[task_name]:
+        print("[error] python must specify array of strings (lines) of code:[...]")
+        error_exit(config)
+    lines = config[task_name]["code"]
+    if type(lines) != list:
+        print("[error] python must be array of strings")
+        error_exit(config)
+    src = ""
+    for line in lines:
+        line = replace_user_vars(line, config)
+        util.log_lvl(line, config, "-verbose")
+        src += line + "\n"
+    exec(src)
+
+
 # get the make executable for the current platform
 def make_for_platform():
     if util.get_platform_name() == "windows":
@@ -1564,6 +1581,7 @@ def main():
         "make": make,
         "launch": launch,
         "shell": shell,
+        "python": exec_python,
         "zip": zip,
         "pmbuild_config": generate_pmbuild_config,
         "vscode": vscode_build,
