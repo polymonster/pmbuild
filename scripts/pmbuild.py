@@ -1419,7 +1419,7 @@ def main():
             if a + 1 > len(sys.argv):
                 print("[error] -vars requires a string of key value pairs", flush=True)
                 sys.exit(0)
-            j = jsn.loads("{" + sys.argv[a+1] + "}")
+            j = jsn.loads("{" + sys.argv[a+1].encode("unicode_escape").decode() + "}")
             for key in j.keys():
                 commandline_vars[key] = j[key]
             # passes -vars to commandline_vars to forward the whole thing
