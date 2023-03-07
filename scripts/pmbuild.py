@@ -248,7 +248,7 @@ def locate_vs_root():
 def locate_vs_latest(config):
     vs_dir = locate_vs_root()
     if len(vs_dir) > 0:
-        supported = ["2015", "2017", "2019"]
+        supported = ["2015", "2017", "2019", "2022"]
         versions = os.listdir(vs_dir)
         found_supported_versions = []
         for v in versions:
@@ -1808,4 +1808,9 @@ def update_tools(config_all):
 
 # entry point of pmbuild
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except(KeyboardInterrupt):
+        # allow keyboard interrupts to exit gracefully
+        pass
+   
