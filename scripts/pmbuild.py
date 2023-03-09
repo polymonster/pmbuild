@@ -23,6 +23,28 @@ import cgu.cgu as cgu
 
 from http.server import HTTPServer, CGIHTTPRequestHandler, executable
 
+
+# print error with colour
+def print_error(msg):
+    ERROR = '\033[91m'
+    ENDC = '\033[0m'
+    print(ERROR + msg + ENDC, flush=True)
+
+
+# print wanring with colour
+def print_warning(msg):
+    WARNING = '\033[93m'
+    ENDC = '\033[0m'
+    print(WARNING + msg + ENDC, flush=True)
+
+
+# print error with colour
+def print_ok(msg):
+    OK = '\033[92m'
+    ENDC = '\033[0m'
+    print(OK + msg + ENDC, flush=True)
+
+
 # exit's on error but allows user to choose not to
 def error_exit(config):
     if "ignore_errors" not in config["special_args"]:
@@ -70,12 +92,12 @@ def read_and_decode_credentials(key):
 # looks up credentials files and retrieves passwords or keys
 def lookup_credentials(config, lookup):
     if not os.path.exists("credentials.bin"):
-        print("[error] no credentials file found, run pmbuild -credentials to create and edit one.")
+        print_error("[error] no credentials file found, run pmbuild -credentials to create and edit one.")
     key = prompt_password()
     credentials = read_and_decode_credentials(key)
     if lookup in credentials.keys():
         return credentials[lookup]
-    print("[error] missing credentials for " + lookup)
+    print_error("[error] missing credentials for " + lookup)
     error_exit(config)
 
 
@@ -258,7 +280,7 @@ def locate_vs_latest(config):
         if len(found_supported_versions) > 0:
             update_user_config("vs_latest", "vs" + str(found_supported_versions[0]), config)
             return "vs" + v
-        print("[warning] could not locate valid visual studio installation in: " + vs_dir)
+        print_warning("[warning] could not locate valid visual studio installation in: " + vs_dir)
     # ensure we have vcvars all and try figuring out vs version from there
     configure_vc_vars_all(config)
     if "vcvarsall_dir" in config.keys():
@@ -272,7 +294,7 @@ def locate_vs_latest(config):
                     print("[vs_latest] found " + vs_version + " from vcvarsall_dir (" + vcva + ")")
                     update_user_config("vs_latest", vs_version, config)
                     return vs_version
-    print("[warning] could not auto detect vs_latest, using vs2019 as default")
+    print_warning("[warning] could not auto detect vs_latest, using vs2019 as default")
     update_user_config("vs_latest", "vs2019", config)
     return "vs2019"
 
@@ -784,7 +806,7 @@ def apply_export_config_rules(export_config, task_name, filename):
             file_config.pop("files", None)
             file_config.pop("rules_order", None)
         else:
-            print("[warning] failed finding an export rule!", flush=True)
+            print_warning("[warning] failed finding an export rule!", flush=True)
             file_config.pop("rules_order", None)
     return file_config
 
@@ -811,7 +833,7 @@ def replace_user_vars(arg, config):
             if uv == "teamid":
                 configure_teamid(config)
             if uv not in config["user_vars"]:
-                print("[error] missing variable " + uv)
+                print_error("[error] missing variable " + uv)
                 error_exit(config)
             arg = arg.replace(v, str(config["user_vars"][uv]))
     return arg
@@ -850,7 +872,7 @@ def evaluate_user_vars(raw_config, config):
     # replace vars with defined values
     for var in required_vars:
         if "user_vars" not in config.keys() or var not in config["user_vars"]:
-            print( "[warning] user var '{}' not defined".format(var))
+            print_warning( "[warning] user var '{}' not defined".format(var))
             continue
         raw_config = raw_config.replace("%{"+var+"}", str(config["user_vars"][var]))
     return raw_config
@@ -896,7 +918,7 @@ def run_tool(config, task_name, tool, files):
         cmd = exe + " "
         args = expand_args(config[task_name]["args"], config, task_name, file[0], file[1])
         if not args:
-            print("[warning] missing export_args for " + file[0])
+            print_warning("[warning] missing export_args for " + file[0])
             continue
         cmd += args
         if len(file[1]) > 0:
@@ -912,9 +934,9 @@ def run_tool(config, task_name, tool, files):
             dependencies.write_to_file_single(d, file[1])
         if e != 0:
             if len(file[0]) > 0:
-                print("[error] processing file " + file[0])
+                print_error("[error] processing file " + file[0])
             else:
-                print("[error] processing task {}".format(task_name))
+                print_error("[error] processing task {}".format(task_name))
             error_exit(config)
 
 
@@ -925,7 +947,7 @@ def run_tool_standalone(config, tool, files):
         cmd = exe + " "
         args = expand_args(config["user_args"], config, "", file[0], file[1])
         if not args:
-            print("[warning] missing export_args for " + file[0])
+            print_warning("[warning] missing export_args for " + file[0])
             continue
         cmd += args
         if len(file[1]) > 0:
@@ -934,7 +956,7 @@ def run_tool_standalone(config, tool, files):
         p = subprocess.Popen(cmd, shell=True)
         e = p.wait()
         if e != 0:
-            print("[error] processing file " + file[0])
+            print_error("[error] processing file " + file[0])
             error_exit(config)
 
 
@@ -951,11 +973,11 @@ def run_tool_help(config, task_name, tool):
 # runs shell commands in the current environment
 def shell(config, task_name):
     if "commands" not in config[task_name]:
-        print("[error] shell must specify array of commands:[...]")
+        print_error("[error] shell must specify array of commands:[...]")
         error_exit(config)
     commands = config[task_name]["commands"]
     if type(commands) != list:
-        print("[error] shell must be array of strings")
+        print_error("[error] shell must be array of strings")
         error_exit(config)
     for cmd in commands:
         cmd = replace_user_vars(cmd, config)
@@ -963,18 +985,18 @@ def shell(config, task_name):
         p = subprocess.Popen(cmd, shell=True)
         e = p.wait()
         if e:
-            print("[error] running " + cmd)
+            print_error("[error] running " + cmd)
             error_exit(config)
 
 
 # executes python code from commands
 def exec_python(config, task_name):
     if "code" not in config[task_name]:
-        print("[error] python must specify array of strings (lines) of code:[...]")
+        print_error("[error] python must specify array of strings (lines) of code:[...]")
         error_exit(config)
     lines = config[task_name]["code"]
     if type(lines) != list:
-        print("[error] python must be array of strings")
+        print_error("[error] python must be array of strings")
         error_exit(config)
     src = ""
     for line in lines:
@@ -1059,7 +1081,7 @@ def print_make_targets(files):
 def make(config, files, options):
     cwd = os.getcwd()
     if "make" not in config.keys():
-        print("[error] make config missing from config.jsn ")
+        print_error("[error] make config missing from config.jsn ")
         error_exit(config)
     toolchain = config["make"]["toolchain"]
     if "-help" in config["special_args"]:
@@ -1070,7 +1092,7 @@ def make(config, files, options):
         setup_env = setup_vcvars(config)
         subprocess.call(setup_env, shell=True)
     if len(files) == 0 or len(options) <= 0:
-        print("[error] no make target specified")
+        print_error("[error] no make target specified")
         print_make_targets(files)
         error_exit(config)
     # filter build files
@@ -1082,7 +1104,7 @@ def make(config, files, options):
             continue
         build_files.append(file)
     if len(build_files) <= 0:
-        print("[error] no make target found for " + str(options))
+        print_error("[error] no make target found for " + str(options))
         print_make_targets(files)
         error_exit(config)
     for file in build_files:
@@ -1136,7 +1158,7 @@ def launch(config, files, options):
         print_launch_targets(files)
         sys.exit(0)
     if len(options) == 0:
-        print("[error] no run target specified")
+        print_error("[error] no run target specified")
         error_exit(config)
     targets = []
     for file in files:
@@ -1146,7 +1168,7 @@ def launch(config, files, options):
         if options[0] == "all" or options[0] == tn:
             targets.append((os.path.dirname(file), os.path.basename(file), tn))
     if len(targets) == 0:
-        print("[error] no run targets found for " + str(options))
+        print_error("[error] no run targets found for " + str(options))
         error_exit(config)
     # switch to bin dir
     for t in targets:
@@ -1417,7 +1439,7 @@ def main():
     for a in range(0, len(sys.argv)):
         if sys.argv[a] == "-vars":
             if a + 1 > len(sys.argv):
-                print("[error] -vars requires a string of key value pairs", flush=True)
+                print_error("[error] -vars requires a string of key value pairs", flush=True)
                 sys.exit(0)
             j = jsn.loads("{" + sys.argv[a+1] + "}")
             for key in j.keys():
@@ -1447,7 +1469,7 @@ def main():
         arg = sys.argv[i]
         if arg == "-files" or arg == "-filter_files":
             if i+1 >= len(sys.argv):
-                print("[error] must supply argument after {}".format(sys.argv[i]), flush=True)
+                print_error("[error] must supply argument after {}".format(sys.argv[i]), flush=True)
                 print_profiles(config_all)
                 sys.exit(1)
             if arg == "-files":
@@ -1480,7 +1502,7 @@ def main():
     profile = ""
     if profile_pos < len(sys.argv):
         if sys.argv[profile_pos] not in config_all:
-            print("[error] " + sys.argv[profile_pos] + " is not a valid pmbuild profile", flush=True)
+            print_error("[error] " + sys.argv[profile_pos] + " is not a valid pmbuild profile", flush=True)
             print_profiles(config_all)
             sys.exit(1)
         profile = sys.argv[profile_pos]
@@ -1502,7 +1524,7 @@ def main():
     for cm in command_mode:
         if cm in sys.argv:
             if cm not in config.keys():
-                print("[error] " + cm + " is not configured in config.jsn (" + profile + ")", flush=True)
+                print_error("[error] " + cm + " is not configured in config.jsn (" + profile + ")", flush=True)
                 error_exit(config)
 
     # load config user for user specific values (sdk version, vcvarsall.bat etc.)
@@ -1530,7 +1552,7 @@ def main():
         config["user_vars"]["cwd"] = os.getcwd()
         config["tool"] = dict()
     else:
-        print("[error] missing valid pmbuild profile as first positional argument", flush=True)
+        print_error("[error] missing valid pmbuild profile as first positional argument", flush=True)
         print_profiles(config_all)
         sys.exit(1)
 
@@ -1598,8 +1620,8 @@ def main():
     elif sys.argv[1] == "tool":
         tool = sys.argv[2]
         if tool not in config_all["tools"]:
-            print("[error] cannot find an associated tool or script for {}".format(tool))
-            print("        add the tool and path to pmbuild_init.jsn")
+            print_error("[error] cannot find an associated tool or script for {}".format(tool))
+            print_error("        add the tool and path to pmbuild_init.jsn")
             sys.exit(1)
         print(config_all)
         tf = [("", "")]
@@ -1619,7 +1641,7 @@ def main():
                     scripts[ext_name] = getattr(ext_module, ext["function"])
                 except:
                     print(sys.exc_info())
-                    print("[warning] missing module " + json.dumps(ext, indent=4))
+                    print_warning("[warning] missing module " + json.dumps(ext, indent=4))
 
         # cleans are special operations which runs first
         if "-clean" in special_args:
@@ -1673,8 +1695,8 @@ def main():
                     scripts.get(task_type)(config, task_name)
                 pass
             else:
-                print("[error] cannot find an associated tool or script for {}".format(task_type))
-                print("        add the tool and path to pmbuild_init.jsn")
+                print_error("[error] cannot find an associated tool or script for {}".format(task_type))
+                print_error("        add the tool and path to pmbuild_init.jsn")
 
     util.print_duration(start_time)
 
@@ -1715,7 +1737,7 @@ def update_github_release(tool_config, is_self=False):
             break
     # return early if we find nothing
     if not found:
-        print("[error] could not find a release for tool")
+        print_error("[error] could not find a release for tool")
         return
 
     if "auth_token" in tool_config:
@@ -1728,7 +1750,7 @@ def update_github_release(tool_config, is_self=False):
         res = requests.get(url, headers=headers)
         asset_json = res.json()
         if "browser_download_url" not in asset_json:
-            print("[error] {} {} does not have download url".format(tag_name, asset_name))
+            print_error("[error] {} {} does not have download url".format(tag_name, asset_name))
             return
         # download
         print("downloading {} {} ({})".format(tool_config["name"], tag_name, asset_name))
@@ -1766,14 +1788,14 @@ def cleanup_update():
 def update_self():
     print("updating pmbuild")
     if not getattr(sys, 'frozen', False):
-        print("[error] cannot update python script pmbuild, update must be used on frozen executable")
+        print_error("[error] cannot update python script pmbuild, update must be used on frozen executable")
     executable_name = {
         "windows": "Windows-x64.zip",
         "mac": "macOS-x64.zip"
     }
     plat = util.get_platform_name()
     if plat not in executable_name:
-        print("[error] unsupported platform")
+        print_error("[error] unsupported platform")
     tool_config = {
         "tag_name": "latest",
         "location": os.path.dirname(sys.executable),
@@ -1798,7 +1820,7 @@ def update_tools(config_all):
             if tool in config_all["tools"]:
                 for req in requires:
                     if req not in config_all["tools_update"][tool]:
-                        print("[error] require field {} in tools_update for {}".format(req, tool))
+                        print_error("[error] require field {} in tools_update for {}".format(req, tool))
                         sys.exit(1)
                 tool_config = config_all["tools_update"][tool]
                 tool_config["location"] = os.path.dirname(config_all["tools"][tool])
