@@ -2,7 +2,7 @@ import platform
 import os
 import shutil
 import time
-
+import pmbuild
 
 # gets path for a network location based on server and folder, /Volumes/folder (mac) \\192.168.0.1\folder (windows)
 def get_platform_network_path(server, folder):
@@ -150,7 +150,7 @@ def open_text_editor(file):
 def print_duration(ts):
     millis = int((time.time() - ts) * 1000)
     print("--------------------------------------------------------------------------------", flush=True)
-    print("pmbuild: All Jobs Complete (" + str(millis) + "ms)")
+    pmbuild.print_ok("pmbuild: All Jobs Complete (" + str(millis) + "ms)")
 
 
 # prints a header to clearly separate console output and to make build steps quick to find
