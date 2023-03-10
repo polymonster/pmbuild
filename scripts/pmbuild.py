@@ -806,7 +806,7 @@ def apply_export_config_rules(export_config, task_name, filename):
             file_config.pop("files", None)
             file_config.pop("rules_order", None)
         else:
-            print_warning("[warning] failed finding an export rule!", flush=True)
+            print_warning("[warning] failed finding an export rule!")
             file_config.pop("rules_order", None)
     return file_config
 
@@ -1439,7 +1439,7 @@ def main():
     for a in range(0, len(sys.argv)):
         if sys.argv[a] == "-vars":
             if a + 1 > len(sys.argv):
-                print_error("[error] -vars requires a string of key value pairs", flush=True)
+                print_error("[error] -vars requires a string of key value pairs")
                 sys.exit(0)
             j = jsn.loads("{" + sys.argv[a+1].encode("unicode_escape").decode() + "}")
             for key in j.keys():
@@ -1469,7 +1469,7 @@ def main():
         arg = sys.argv[i]
         if arg == "-files" or arg == "-filter_files":
             if i+1 >= len(sys.argv):
-                print_error("[error] must supply argument after {}".format(sys.argv[i]), flush=True)
+                print_error("[error] must supply argument after {}".format(sys.argv[i]))
                 print_profiles(config_all)
                 sys.exit(1)
             if arg == "-files":
@@ -1502,7 +1502,7 @@ def main():
     profile = ""
     if profile_pos < len(sys.argv):
         if sys.argv[profile_pos] not in config_all:
-            print_error("[error] " + sys.argv[profile_pos] + " is not a valid pmbuild profile", flush=True)
+            print_error("[error] " + sys.argv[profile_pos] + " is not a valid pmbuild profile")
             print_profiles(config_all)
             sys.exit(1)
         profile = sys.argv[profile_pos]
@@ -1524,7 +1524,7 @@ def main():
     for cm in command_mode:
         if cm in sys.argv:
             if cm not in config.keys():
-                print_error("[error] " + cm + " is not configured in config.jsn (" + profile + ")", flush=True)
+                print_error("[error] " + cm + " is not configured in config.jsn (" + profile + ")")
                 error_exit(config)
 
     # load config user for user specific values (sdk version, vcvarsall.bat etc.)
@@ -1552,7 +1552,7 @@ def main():
         config["user_vars"]["cwd"] = os.getcwd()
         config["tool"] = dict()
     else:
-        print_error("[error] missing valid pmbuild profile as first positional argument", flush=True)
+        print_error("[error] missing valid pmbuild profile as first positional argument")
         print_profiles(config_all)
         sys.exit(1)
 
