@@ -1487,7 +1487,7 @@ def main():
             sys.argv.remove(arg)
 
     # add implicit all
-    if "-help" not in special_args and "-clean" not in special_args:
+    if "-help" not in special_args and "-clean" not in special_args and "-cfg" not in special_args:
         if len(sys.argv) == 2 and profile_pos == 1:
             special_args.append("-all")
 
