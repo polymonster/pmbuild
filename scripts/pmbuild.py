@@ -968,6 +968,14 @@ def run_tool_help(config, task_name, tool):
         tool_help = tools_help[tool]
         p = subprocess.Popen(exe + " " + tool_help["help_arg"], shell=True)
         p.wait()
+    else:
+        print_warning("[warning] help is not configured for {}:".format(tool))
+        print_warning("  add a tools_help entry to your config.jsn:")
+        print_warning("  tools_help: {")
+        print_warning("    {}: {{".format(tool))
+        print_warning("      help_arg: <-h, -help, --help?>")
+        print_warning("    }")
+        print_warning("  }")
 
 
 # runs shell commands in the current environment
