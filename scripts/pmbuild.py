@@ -691,6 +691,8 @@ def get_task_files(config, task_name):
                 stripped.append((changed, output[1]))
         pairs = stripped
     pairs = filter_files(config, task_name, pairs)
+    if len(pairs) == 0:
+        print_warning(f"[warning] no files were matched for this task: {files_array}")
     return pairs
 
 
@@ -1321,6 +1323,15 @@ def core_help(config, taskname, task_type):
 def generate_build_order(config, config_all, all):
     # filter tasks
     runnable = []
+
+    # check for typos
+    for task in sys.argv[2:]:
+        if not task.startswith("-n"):
+            task = task.strip("-")
+            if task not in config:
+                print_warning(f"[warning] task '{task}' not found in config")
+
+    # add runnable tasks
     for task_name in config.keys():
         task = config[task_name]
         if type(task) != dict:
