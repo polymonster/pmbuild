@@ -993,7 +993,7 @@ def shell(config, task_name):
         p = subprocess.Popen(cmd, shell=True)
         e = p.wait()
         if e:
-            print_error("[error] running " + cmd)
+            print_error("[error] running {} ({})".format(cmd, e))
             error_exit(config)
 
 
