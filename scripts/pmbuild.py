@@ -16,10 +16,12 @@ import fnmatch
 import zipfile
 import getpass
 
+import jsn.jsn as jsn
+
 import util
 import dependencies
-import jsn.jsn as jsn
 import cgu.cgu as cgu
+
 
 from http.server import HTTPServer, CGIHTTPRequestHandler, executable
 
@@ -1286,6 +1288,19 @@ def pmbuild_profile_help(config, build_order):
     print("\navailable tasks for profile " + config["user_vars"]["profile"] + ":")
     print("    config.jsn (edit task settings or add new ones in here)")
     print("    build order:")
+
+    non_profiles = [
+        "tools",
+        "tools_help",
+        "extensions",
+        "user_vars",
+        "special_args",
+        "post_build_order",
+        "pre_build_order",
+        "build_order",
+        "user_args"
+    ]
+
     for task_name in build_order:
         task = config[task_name]
     
@@ -1298,8 +1313,14 @@ def pmbuild_profile_help(config, build_order):
             msg = " " * 8 + task_name + " (disabled)"
             util.log_lvl(msg, config, "-verbose")
             continue
-            
+
         print(" " * 8 + task_name)
+
+    print("")
+    print("    explicit tasks:")
+    for key in config:
+        if key not in build_order and key not in non_profiles:
+            print(" " * 8 + key)
 
 
 # build help for core tasks
@@ -1598,7 +1619,7 @@ def main():
         files = jsn.loads("{files:" + user_files + "}")
         config["tool"]["files"] = files["files"]
 
-    # verbosity indicator
+    # display user vars
     util.log_lvl("user_vars:", config, "-verbose")
     util.log_lvl(json.dumps(config["user_vars"], indent=4), config, "-verbose")
 
@@ -1613,6 +1634,10 @@ def main():
         print(sys.argv, flush=True)
         print(special_args, flush=True)
         print(json.dumps(config, indent=4), flush=True)
+
+    # display tools
+    util.log_lvl("tools:", config, "-verbose")
+    util.log_lvl(json.dumps(config["tools"], indent=4), config, "-verbose")
 
     # core scripts
     scripts = {
