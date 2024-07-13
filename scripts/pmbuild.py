@@ -1315,7 +1315,7 @@ def pmbuild_profile_help(config, build_order):
     explicit_tasks = []
     for key in config:
         if key not in build_order and key not in non_profiles:
-            explicit_tasks.append(" " * 8 + key + "\n")
+            explicit_tasks.append(" " * 8 + key)
 
     if len(explicit_tasks) > 0:
         print("")
