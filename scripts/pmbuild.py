@@ -1221,11 +1221,9 @@ def generate_pmbuild_config(config, taskname):
     f.write(json.dumps(md, indent=4))
 
 
-# print available profiles in config.jsn of cwd
-def print_profiles(config):
-    print("\nprofiles:")
-    print("    config.jsn (edit task settings or add profiles in here)")
-    non_profiles = [
+# return config keys that are not runnable tasks
+def get_non_profiles():
+    return [
         "tools",
         "tools_help",
         "extensions",
@@ -1233,8 +1231,16 @@ def print_profiles(config):
         "special_args",
         "post_build_order",
         "pre_build_order",
-        "build_order"
+        "build_order",
+        "user_args"
     ]
+
+
+# print available profiles in config.jsn of cwd
+def print_profiles(config):
+    print("\nprofiles:")
+    print("    config.jsn (edit task settings or add profiles in here)")
+    non_profiles = get_non_profiles()
     for p_name in config.keys():
         if p_name not in non_profiles:
             p = config[p_name]
@@ -1289,17 +1295,7 @@ def pmbuild_profile_help(config, build_order):
     print("    config.jsn (edit task settings or add new ones in here)")
     print("    build order:")
 
-    non_profiles = [
-        "tools",
-        "tools_help",
-        "extensions",
-        "user_vars",
-        "special_args",
-        "post_build_order",
-        "pre_build_order",
-        "build_order",
-        "user_args"
-    ]
+    non_profiles = get_non_profiles()
 
     for task_name in build_order:
         task = config[task_name]
@@ -1316,11 +1312,17 @@ def pmbuild_profile_help(config, build_order):
 
         print(" " * 8 + task_name)
 
-    print("")
-    print("    explicit tasks:")
+    explicit_tasks = []
     for key in config:
         if key not in build_order and key not in non_profiles:
-            print(" " * 8 + key)
+            explicit_tasks.append(" " * 8 + key + "\n")
+
+    if len(explicit_tasks) > 0:
+        print("")
+        print("    explicit tasks:")
+        for task in explicit_tasks:
+            print(task)
+    
 
 
 # build help for core tasks
