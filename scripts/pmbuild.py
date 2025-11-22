@@ -367,7 +367,7 @@ def configure_vc_vars_all(config):
 
 # calls vcvars all to setup the current environment to be able to use msbuild
 def setup_vcvars(config):
-    return "pushd \ && cd \"" + config["user_vars"]["vcvarsall_dir"] + "\" && vcvarsall.bat x86_amd64 && popd"
+    return "pushd \\ && cd \"" + config["user_vars"]["vcvarsall_dir"] + "\" && vcvarsall.bat x86_amd64 && popd"
 
 
 # apple only, ask user for their team id to insert into xcode projects
@@ -1143,7 +1143,7 @@ def run_web(cmd):
     daemon.setDaemon(True)
     daemon.start()
     chrome_path = {
-        "mac": 'open -a /Applications/Google\ Chrome.app %s',
+        "mac": 'open -a /Applications/Google\\ Chrome.app %s',
         "windows": "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe %s",
         "linux": ""
     }
@@ -1244,17 +1244,17 @@ def print_profiles(config):
     for p_name in config.keys():
         if p_name not in non_profiles:
             p = config[p_name]
-            
+
             if "hidden" in p and p["hidden"] == True:
                 msg = " " * 8 + p_name + " (hidden)"
                 util.log_lvl(msg, config, "-verbose")
                 continue
-                
+
             if "enabled" in p and p["enabled"] == False:
                 msg = " " * 8 + p_name + " (disabled)"
                 util.log_lvl(msg, config, "-verbose")
                 continue
-                
+
             print(" " * 8 + p_name)
 
 
@@ -1299,12 +1299,12 @@ def pmbuild_profile_help(config, build_order):
 
     for task_name in build_order:
         task = config[task_name]
-    
+
         if "hidden" in task and task["hidden"] == True:
             msg = " " * 8 + task_name + " (hidden)"
             util.log_lvl(msg, config, "-verbose")
             continue
-            
+
         if "enabled" in task and task["enabled"] == False:
             msg = " " * 8 + task_name + " (disabled)"
             util.log_lvl(msg, config, "-verbose")
@@ -1322,7 +1322,7 @@ def pmbuild_profile_help(config, build_order):
         print("    explicit tasks:")
         for task in explicit_tasks:
             print(task)
-    
+
 
 
 # build help for core tasks
@@ -1432,7 +1432,7 @@ def main():
     all_imports = config_jsn[:start].split("\n")
     config_jsn = config_jsn[start:]
     imports = ""
-            
+
     # when running in exe mode imports may differ
     if getattr(sys, 'frozen', False):
         exe_path = os.path.dirname(sys.executable)
@@ -1495,7 +1495,7 @@ def main():
     # remove vars from the main cmd line... allows implicit all to work
     for r in reversed(rm):
         sys.argv.pop(r)
-    
+
     # extract extra -args
     user_args = []
     if "-args" in sys.argv:
@@ -1539,7 +1539,7 @@ def main():
         return
 
     util.print_header(build_mode)
-        
+
     # first arg is build profile, load profile and merge the config for platform
     profile = ""
     if profile_pos < len(sys.argv):
@@ -1710,7 +1710,7 @@ def main():
         # run tasks
         for task_name in runnable_ordered:
             task = config[task_name]
-            
+
             # evaluate user vars
             task_string = json.dumps(task, indent=4)
             task_string = evaluate_user_vars(task_string, config)
@@ -1755,10 +1755,10 @@ def update_github_release(tool_config, is_self=False):
     headers = {
         "Accept": "application/vnd.github.v3+json"
     }
-    
+
     if "auth_token" in tool_config:
         headers = { "Accept": "application/vnd.github.v3+json", "Authorization": "token " + tool_config["auth_token"] }
-        
+
     res = requests.get(tool_config["repository"], headers=headers)
     # search for the release, or fetch latest
     found = False
@@ -1802,7 +1802,7 @@ def update_github_release(tool_config, is_self=False):
         print("downloading {} {} ({})".format(tool_config["name"], tag_name, asset_name))
         url = asset_json["browser_download_url"]
         res = requests.get(url, stream=True)
-        
+
     # download release, write to file
     location = tool_config["location"]
     os.makedirs(location, exist_ok=True)
@@ -1881,4 +1881,4 @@ if __name__ == "__main__":
     except(KeyboardInterrupt):
         # allow keyboard interrupts to exit gracefully
         pass
-   
+
