@@ -23,7 +23,7 @@ import dependencies
 import cgu.cgu as cgu
 
 
-from http.server import HTTPServer, CGIHTTPRequestHandler, executable
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 
 # print error with colour
@@ -1132,7 +1132,7 @@ def make(config, files, options):
 
 # start a simple webserver serving path on port
 def start_server(path, port=8000):
-    httpd = HTTPServer(('', port), CGIHTTPRequestHandler)
+    httpd = HTTPServer(('', port), SimpleHTTPRequestHandler)
     httpd.serve_forever()
 
 
